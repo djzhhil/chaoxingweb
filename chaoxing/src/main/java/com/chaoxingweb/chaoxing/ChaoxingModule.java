@@ -1,4 +1,4 @@
-package com.chaoxing.chaoxing;
+package com.chaoxingweb.chaoxing;
 
 /**
  * TODO: 超星模块
