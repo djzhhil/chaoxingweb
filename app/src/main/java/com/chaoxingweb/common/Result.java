@@ -1,4 +1,4 @@
-package com.chaoxingweb.auth.common;
+package com.chaoxingweb.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -6,6 +6,10 @@
 
 ```
 chaoxingweb/
+├── app/               # 应用启动模块
+│   ├── ChaoxingWebApplication.java  # 启动类
+│   └── common/        # 公共能力
+│       └── Result.java  # 统一返回结果
 ├── auth/              # 认证模块
 │   ├── entity/       # 实体类
 │   ├── dto/          # 数据传输对象
@@ -20,6 +24,14 @@ chaoxingweb/
 ```
 
 ## 模块说明
+
+### App 模块
+
+应用启动模块，负责项目启动和公共能力。
+
+**功能：**
+- 项目启动类
+- 统一返回结果（Result）
 
 ### Auth 模块
 
@@ -89,13 +101,12 @@ CREATE DATABASE chaoxing CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 # 编译项目
 mvn clean install
 
-# 运行 auth 模块
-cd auth
+# 运行 app 模块（启动类）
+cd app
 mvn spring-boot:run
 
-# 运行 chaoxing 模块
-cd chaoxing
-mvn spring-boot:run
+# 或者直接运行 app 模块
+java -jar app/target/app-1.0.0.jar
 ```
 
 ## 配置说明

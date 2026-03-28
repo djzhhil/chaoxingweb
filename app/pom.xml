@@ -11,39 +11,18 @@
         <version>1.0.0</version>
     </parent>
 
-    <artifactId>chaoxing</artifactId>
+    <artifactId>app</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Chaoxing Module</name>
-    <description>超星模块 - 超星学习通自动化功能</description>
+    <name>App Module</name>
+    <description>应用启动模块 - 公共能力和启动类</description>
 
     <dependencies>
-        <!-- App Module -->
-        <dependency>
-            <groupId>com.chaoxingweb</groupId>
-            <artifactId>app</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
-        <!-- Auth Module -->
-        <dependency>
-            <groupId>com.chaoxingweb</groupId>
-            <artifactId>auth</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- OkHttp -->
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>4.12.0</version>
         </dependency>
 
         <!-- Lombok -->

@@ -12,7 +12,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.chaoxing</groupId>
+    <groupId>com.chaoxingweb</groupId>
     <artifactId>chaoxingweb</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
@@ -21,6 +21,7 @@
     <description>超星学习通自动化工具 - Java 版本</description>
 
     <modules>
+        <module>app</module>
         <module>auth</module>
         <module>chaoxing</module>
     </modules>
