@@ -35,6 +35,8 @@ public class SecurityConfig {
 
                 // 配置请求授权
                 .authorizeHttpRequests(auth -> auth
+                        // 允许 Swagger UI 访问
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         // 允许注册和登录接口
                         .requestMatchers("/api/users/register", "/api/users/login").permitAll()
                         // 其他请求需要认证
