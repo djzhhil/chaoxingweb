@@ -1,4 +1,4 @@
-package com.chaoxingweb.auth.exception;
+package com.chaoxingweb.common.exception;
 
 import lombok.Getter;
 

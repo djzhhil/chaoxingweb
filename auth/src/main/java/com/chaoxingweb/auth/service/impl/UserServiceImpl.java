@@ -8,7 +8,7 @@ import com.chaoxingweb.auth.dto.UserUpdateDTO;
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.enums.UserRole;
 import com.chaoxingweb.auth.enums.UserStatus;
-import com.chaoxingweb.auth.exception.BusinessException;
+import com.chaoxingweb.common.exception.BusinessException;
 import com.chaoxingweb.auth.repository.UserRepository;
 import com.chaoxingweb.auth.service.UserService;
 import com.chaoxingweb.auth.util.JwtTokenProvider;
