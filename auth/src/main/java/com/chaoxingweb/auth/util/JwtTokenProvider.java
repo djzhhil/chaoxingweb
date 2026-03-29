@@ -17,7 +17,7 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret:chaoxingweb-secret-key-2024}")
+    @Value("${jwt.secret:chaoxingweb-secret-key-2024-secure-jwt-token}")
     private String jwtSecret;
 
     @Value("${jwt.expiration:86400000}") // 24小时
