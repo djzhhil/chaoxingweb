@@ -1,4 +1,4 @@
-package com.chaoxingweb.common;
+package com.chaoxingweb.common.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

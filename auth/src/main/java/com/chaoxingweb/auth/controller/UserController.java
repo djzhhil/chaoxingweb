@@ -1,6 +1,6 @@
 package com.chaoxingweb.auth.controller;
 
-import com.chaoxingweb.common.Result;
+import com.chaoxingweb.common.result.Result;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;

@@ -1,6 +1,7 @@
-package com.chaoxingweb.common.exception;
+package com.chaoxingweb.app.exception;
 
-import com.chaoxingweb.common.Result;
+import com.chaoxingweb.common.exception.BusinessException;
+import com.chaoxingweb.common.result.Result;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
