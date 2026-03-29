@@ -8,23 +8,27 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 /**
- * JWT Token 提供者
+ * JWT Token 提供者（适配 jjwt 0.12.3）
  */
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret:chaoxingweb-secret-key-2024-secure-jwt-token}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Value("${jwt.expiration:86400000}") // 24小时
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    /**
+     * 生成 SecretKey（必须用 SecretKey，不能用 Key）
+     */
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -32,38 +36,38 @@ public class JwtTokenProvider {
      */
     public String generateToken(User user) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpiration);
+        Date expiry = new Date(now.getTime() + jwtExpiration);
 
         return Jwts.builder()
-                .setSubject(user.getUsername())
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
+                .subject(user.getUsername())
+                .issuedAt(now)
+                .expiration(expiry)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
 
     /**
-     * 从 Token 中获取用户名
+     * 从 Token 中解析用户名
      */
-    public String getUsernameFromToken(String token) {
+    public String getUsername(String token) {
         Claims claims = Jwts.parser()
-                .setSigningKey(getSigningKey())
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         return claims.getSubject();
     }
 
     /**
-     * 验证 Token
+     * 校验 Token 是否有效
      */
-    public boolean validateToken(String token) {
+    public boolean validate(String token) {
         try {
             Jwts.parser()
-                    .setSigningKey(getSigningKey())
+                    .verifyWith(getSigningKey())
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (Exception e) {
             return false;
@@ -73,12 +77,12 @@ public class JwtTokenProvider {
     /**
      * 获取 Token 过期时间
      */
-    public Date getExpirationDateFromToken(String token) {
+    public Date getExpiration(String token) {
         Claims claims = Jwts.parser()
-                .setSigningKey(getSigningKey())
+                .verifyWith(getSigningKey())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
 
         return claims.getExpiration();
     }

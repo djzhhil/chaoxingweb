@@ -21,8 +21,8 @@ spring:
 
 # JWT 配置
 jwt:
-  secret: chaoxingweb-secret-key-2024-secure-jwt-token
-  expiration: 86400000 # 24小时
+  secret: chaoxingweb-secret-key-chaoxingweb-secret-key-chaoxingweb-secret-key-chaoxingweb-secret-key-123456
+  expiration: 86400000
 
 # 服务器配置
 server:
