@@ -1,4 +1,4 @@
-package com.chaoxingweb.chaoxing.config;
+package com.chaoxingweb.app.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
