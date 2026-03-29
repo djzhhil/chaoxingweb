@@ -26,7 +26,7 @@ public interface UserService {
     /**
      * 获取当前用户
      */
-    User getCurrentUser();
+    UserVO getCurrentUser();
 
     /**
      * 更新用户信息

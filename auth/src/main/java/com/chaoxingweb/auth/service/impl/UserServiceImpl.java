@@ -91,7 +91,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getCurrentUser() {
+    public UserVO getCurrentUser() {
+        // TODO: 从 SecurityContext 获取当前用户
+        // 暂时返回 null，后续实现
+        throw new BusinessException("未登录");
+    }
+
+    /**
+     * 获取当前用户实体（内部使用）
+     */
+    private User getCurrentUserEntity() {
         // TODO: 从 SecurityContext 获取当前用户
         // 暂时返回 null，后续实现
         throw new BusinessException("未登录");
@@ -100,7 +109,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public UserVO updateUser(UserUpdateDTO dto) {
-        User user = getCurrentUser();
+        User user = getCurrentUserEntity();
 
         if (dto.getPhone() != null) {
             user.setPhone(dto.getPhone());
@@ -118,7 +127,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changePassword(ChangePasswordDTO dto) {
-        User user = getCurrentUser();
+        User user = getCurrentUserEntity();
 
         // 校验旧密码
         if (!passwordEncoder.matches(dto.getOldPassword(), user.getPassword())) {
