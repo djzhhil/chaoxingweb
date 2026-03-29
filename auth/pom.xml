@@ -19,10 +19,10 @@
     <description>认证模块 - 用户注册、登录、权限管理</description>
 
     <dependencies>
-        <!-- App Module -->
+        <!-- Common Module -->
         <dependency>
             <groupId>com.chaoxingweb</groupId>
-            <artifactId>app</artifactId>
+            <artifactId>common</artifactId>
             <version>1.0.0</version>
         </dependency>
         <!-- Spring Boot Web -->

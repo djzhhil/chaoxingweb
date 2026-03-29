@@ -25,6 +25,27 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- 引入 auth 模块 -->
+        <dependency>
+            <groupId>com.chaoxingweb</groupId>
+            <artifactId>auth</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- 引入 chaoxing 模块 -->
+        <dependency>
+            <groupId>com.chaoxingweb</groupId>
+            <artifactId>chaoxing</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
+        <!-- 引入 common 模块 -->
+        <dependency>
+            <groupId>com.chaoxingweb</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0.0</version>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>

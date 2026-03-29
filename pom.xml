@@ -24,6 +24,7 @@
         <module>app</module>
         <module>auth</module>
         <module>chaoxing</module>
+        <module>common</module>
     </modules>
 
     <properties>
