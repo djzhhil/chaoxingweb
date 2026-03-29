@@ -12,19 +12,12 @@
     </parent>
 
     <artifactId>app</artifactId>
-    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>App Module</name>
     <description>应用启动模块 - 公共能力和启动类</description>
 
     <dependencies>
-        <!-- Spring Boot Web -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
         <!-- 引入 auth 模块 -->
         <dependency>
             <groupId>com.chaoxingweb</groupId>

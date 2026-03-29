@@ -12,7 +12,6 @@
     </parent>
 
     <artifactId>auth</artifactId>
-    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>Auth Module</name>
@@ -23,7 +22,6 @@
         <dependency>
             <groupId>com.chaoxingweb</groupId>
             <artifactId>common</artifactId>
-            <version>1.0.0</version>
         </dependency>
         <!-- Spring Boot Web -->
         <dependency>

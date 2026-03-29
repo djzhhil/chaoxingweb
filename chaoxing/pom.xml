@@ -12,7 +12,6 @@
     </parent>
 
     <artifactId>chaoxing</artifactId>
-    <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>Chaoxing Module</name>
@@ -23,14 +22,12 @@
         <dependency>
             <groupId>com.chaoxingweb</groupId>
             <artifactId>common</artifactId>
-            <version>1.0.0</version>
         </dependency>
 
         <!-- Auth Module -->
         <dependency>
             <groupId>com.chaoxingweb</groupId>
             <artifactId>auth</artifactId>
-            <version>1.0.0</version>
         </dependency>
 
         <!-- Spring Boot Web -->
