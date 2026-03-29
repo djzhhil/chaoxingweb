@@ -24,12 +24,6 @@
             <artifactId>common</artifactId>
         </dependency>
 
-        <!-- Auth Module -->
-        <dependency>
-            <groupId>com.chaoxingweb</groupId>
-            <artifactId>auth</artifactId>
-        </dependency>
-
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
