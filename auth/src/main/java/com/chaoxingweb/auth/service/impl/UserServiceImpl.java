@@ -15,6 +15,8 @@ import com.chaoxingweb.auth.util.JwtTokenProvider;
 import com.chaoxingweb.auth.vo.LoginResult;
 import com.chaoxingweb.auth.vo.UserVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -92,18 +94,28 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserVO getCurrentUser() {
-        // TODO: 从 SecurityContext 获取当前用户
-        // 暂时返回 null，后续实现
-        throw new BusinessException("未登录");
+        User user = getCurrentUserEntity();
+        return BeanUtil.copyProperties(user, UserVO.class);
     }
 
     /**
      * 获取当前用户实体（内部使用）
      */
     private User getCurrentUserEntity() {
-        // TODO: 从 SecurityContext 获取当前用户
-        // 暂时返回 null，后续实现
-        throw new BusinessException("未登录");
+        // 1. 从 SecurityContext 获取认证信息
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        // 2. 检查是否已认证
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BusinessException("未登录");
+        }
+
+        // 3. 获取用户名
+        String username = authentication.getName();
+
+        // 4. 查找用户
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException("用户不存在"));
     }
 
     @Override

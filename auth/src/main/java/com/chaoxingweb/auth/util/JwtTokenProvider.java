@@ -40,6 +40,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(user.getUsername())
+                .claim("userId", user.getId())  // 添加 userId 到 payload
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -57,6 +58,19 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.getSubject();
+    }
+
+    /**
+     * 从 Token 中解析用户 ID
+     */
+    public Long getUserId(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get("userId", Long.class);
     }
 
     /**
