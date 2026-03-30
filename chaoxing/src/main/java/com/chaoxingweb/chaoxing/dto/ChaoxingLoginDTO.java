@@ -5,13 +5,31 @@ import lombok.Data;
 
 /**
  * 超星登录 DTO
+ *
+ * 职责：
+ * - 内部数据传输（模块之间）
+ * - 不用于外部视图展示
  */
 @Data
 public class ChaoxingLoginDTO {
 
-    @NotBlank(message = "用户名不能为空")
+    /**
+     * 是否使用 Cookie 登录
+     */
+    private boolean useCookie;
+
+    /**
+     * 用户名（账号密码登录时使用）
+     */
     private String username;
 
-    @NotBlank(message = "密码不能为空")
+    /**
+     * 密码（账号密码登录时使用）
+     */
     private String password;
+
+    /**
+     * Cookie（Cookie 登录时使用）
+     */
+    private String cookie;
 }

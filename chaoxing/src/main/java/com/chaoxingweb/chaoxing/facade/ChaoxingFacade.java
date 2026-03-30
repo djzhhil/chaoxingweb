@@ -6,15 +6,18 @@ import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
 /**
  * 超星模块 Facade
  *
- * 提供给 auth 模块使用的接口，用于调用 chaoxing 模块内部的业务逻辑
+ * 职责：
+ * - 对外提供统一接口
+ * - 协调各个模块
+ * - 不包含具体业务逻辑
  */
 public interface ChaoxingFacade {
 
     /**
      * 超星登录
      *
-     * @param dto 登录信息
-     * @return 登录结果
+     * @param dto 登录信息（DTO - 内部数据传输）
+     * @return 登录结果（VO - 外部视图展示）
      */
     ChaoxingLoginResult login(ChaoxingLoginDTO dto);
 }

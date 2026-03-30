@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * 超星登录结果 VO
+ *
+ * 职责：
+ * - 外部视图展示（API 返回）
+ * - 不用于内部数据传输
  */
 @Data
 @Builder
