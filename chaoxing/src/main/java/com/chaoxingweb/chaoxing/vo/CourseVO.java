@@ -9,10 +9,14 @@ package com.chaoxingweb.chaoxing.vo;
 public class CourseVO {
 
     private String courseId;
+    private String clazzId;
+    private String cpi;
     private String courseName;
     private String teacherName;
     private String schoolName;
-    private String courseStatus;
+    private String description;
+    private String coverUrl;
+    private String status;
     private int progress;
     private int totalJobs;
     private int completedJobs;
@@ -26,6 +30,22 @@ public class CourseVO {
 
     public void setCourseId(String courseId) {
         this.courseId = courseId;
+    }
+
+    public String getClazzId() {
+        return clazzId;
+    }
+
+    public void setClazzId(String clazzId) {
+        this.clazzId = clazzId;
+    }
+
+    public String getCpi() {
+        return cpi;
+    }
+
+    public void setCpi(String cpi) {
+        this.cpi = cpi;
     }
 
     public String getCourseName() {
@@ -52,12 +72,28 @@ public class CourseVO {
         this.schoolName = schoolName;
     }
 
-    public String getCourseStatus() {
-        return courseStatus;
+    public String getDescription() {
+        return description;
     }
 
-    public void setCourseStatus(String courseStatus) {
-        this.courseStatus = courseStatus;
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getCoverUrl() {
+        return coverUrl;
+    }
+
+    public void setCoverUrl(String coverUrl) {
+        this.coverUrl = coverUrl;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public int getProgress() {

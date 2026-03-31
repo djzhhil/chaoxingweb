@@ -18,6 +18,12 @@
     <description>超星模块 - 超星学习通自动化功能</description>
 
     <dependencies>
+        <!-- Auth Module -->
+        <dependency>
+            <groupId>com.chaoxingweb</groupId>
+            <artifactId>auth</artifactId>
+        </dependency>
+
         <!-- Common Module -->
         <dependency>
             <groupId>com.chaoxingweb</groupId>

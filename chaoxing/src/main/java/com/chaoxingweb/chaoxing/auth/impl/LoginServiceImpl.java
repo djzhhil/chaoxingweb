@@ -1,6 +1,7 @@
 package com.chaoxingweb.chaoxing.auth.impl;
 
-import com.chaoxingweb.chaoxing.auth.LoginService;
+import com.chaoxingweb.auth.service.LoginService;
+import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.core.AccountManager;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
@@ -11,8 +12,6 @@ import okhttp3.*;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,12 +32,12 @@ import java.util.concurrent.TimeUnit;
 public class LoginServiceImpl implements LoginService {
 
     private static final String LOGIN_URL = "https://passport2.chaoxing.com/fanyalogin";
-    private static final String COURSE_LIST_URL = "https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36";
 
     private final AccountManager accountManager;
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
+    private final ChaoxingApiClient chaoxingApiClient;
 
     private OkHttpClient httpClient;
 
@@ -135,7 +134,7 @@ public class LoginServiceImpl implements LoginService {
             sessionManager.updateCookie(cookie);
 
             // 验证 Cookie
-            if (!validateCookie(cookie)) {
+            if (!chaoxingApiClient.validateCookie(cookie)) {
                 log.warn("Cookie 验证失败");
                 return new LoginResult(false, "Cookie 已失效");
             }
@@ -159,55 +158,6 @@ public class LoginServiceImpl implements LoginService {
     public void logout() {
         sessionManager.close();
         log.info("登出成功");
-    }
-
-    /**
-     * 验证 Cookie 是否有效
-     *
-     * 严格对照 Python 实现：
-     * - 发送 POST 请求到课程列表接口
-     * - 检查响应是否包含登录页面
-     */
-    private boolean validateCookie(String cookie) {
-        try {
-            // 构造请求
-            FormBody.Builder formBuilder = new FormBody.Builder()
-                    .add("courseType", "1")
-                    .add("courseFolderId", "0")
-                    .add("query", "")
-                    .add("superstarClass", "0");
-
-            Request request = new Request.Builder()
-                    .url(COURSE_LIST_URL)
-                    .post(formBuilder.build())
-                    .addHeader("User-Agent", USER_AGENT)
-                    .addHeader("Cookie", cookie)
-                    .build();
-
-            // 发送请求
-            Response response = httpClient.newCall(request).execute();
-
-            if (!response.isSuccessful()) {
-                log.debug("Cookie 验证请求失败: status={}", response.code());
-                return false;
-            }
-
-            // 解析响应
-            String responseBody = response.body().string();
-
-            // 检查是否包含登录页面
-            if (responseBody.contains("passport2.chaoxing.com") || responseBody.toLowerCase().contains("login")) {
-                log.debug("Cookie 验证失败: 响应包含登录页面");
-                return false;
-            }
-
-            log.debug("Cookie 验证成功");
-            return true;
-
-        } catch (Exception e) {
-            log.debug("Cookie 验证异常", e);
-            return false;
-        }
     }
 
     /**

@@ -1,7 +1,7 @@
 package com.chaoxingweb.app.controller;
 
-import com.chaoxingweb.chaoxing.dto.CourseDTO;
-import com.chaoxingweb.chaoxing.course.CourseService;
+import com.chaoxingweb.course.service.CourseService;
+import com.chaoxingweb.course.vo.CourseVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,10 +37,10 @@ public class CourseController {
      * @return 课程列表
      */
     @GetMapping("/list")
-    public ResponseEntity<List<CourseDTO>> getCourseList() {
+    public ResponseEntity<List<CourseVO>> getCourseList() {
         try {
             logger.info("收到获取课程列表请求");
-            List<CourseDTO> courseList = courseService.getCourseList();
+            List<CourseVO> courseList = courseService.getCourseList();
             return ResponseEntity.ok(courseList);
         } catch (Exception e) {
             logger.error("获取课程列表失败", e);

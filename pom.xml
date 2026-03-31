@@ -25,6 +25,7 @@
         <module>auth</module>
         <module>chaoxing</module>
         <module>common</module>
+        <module>course</module>
     </modules>
 
     <properties>
@@ -56,6 +57,11 @@
             <dependency>
                 <groupId>com.chaoxingweb</groupId>
                 <artifactId>chaoxing</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chaoxingweb</groupId>
+                <artifactId>course</artifactId>
                 <version>1.0.0</version>
             </dependency>
 

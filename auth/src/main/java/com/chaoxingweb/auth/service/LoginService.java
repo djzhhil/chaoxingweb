@@ -1,4 +1,4 @@
-package com.chaoxingweb.chaoxing.auth;
+package com.chaoxingweb.auth.service;
 
 /**
  * 登录服务接口

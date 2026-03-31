@@ -1,6 +1,5 @@
-package com.chaoxingweb.auth.controller;
+package com.chaoxingweb.app.controller;
 
-import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.common.result.Result;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
@@ -68,21 +67,23 @@ public class UserController {
         return Result.success();
     }
 
-    /**
-     * 绑定超星账号
-     */
-    @PostMapping("/bind-chaoxing")
-    public Result<Void> bindChaoxingAccount(@Valid @RequestBody BindChaoxingDTO dto) {
-        userService.bindChaoxingAccount(dto);
-        return Result.success();
-    }
+    // TODO: 绑定超星账号功能已移动到 course 模块的 AccountBindingService
+    // /**
+    //  * 绑定超星账号
+    //  */
+    // @PostMapping("/bind-chaoxing")
+    // public Result<Void> bindChaoxingAccount(@Valid @RequestBody BindChaoxingDTO dto) {
+    //     userService.bindChaoxingAccount(dto);
+    //     return Result.success();
+    // }
 
-    /**
-     * 解绑超星账号
-     */
-    @PostMapping("/unbind-chaoxing")
-    public Result<Void> unbindChaoxingAccount() {
-        userService.unbindChaoxingAccount();
-        return Result.success();
-    }
+    // TODO: 解绑超星账号功能已移动到 course 模块的 AccountBindingService
+    // /**
+    //  * 解绑超星账号
+    //  */
+    // @PostMapping("/unbind-chaoxing")
+    // public Result<Void> unbindChaoxingAccount() {
+    //     userService.unbindChaoxingAccount();
+    //     return Result.success();
+    // }
 }

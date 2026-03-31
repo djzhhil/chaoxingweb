@@ -1,7 +1,6 @@
 package com.chaoxingweb.auth.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;
@@ -9,9 +8,6 @@ import com.chaoxingweb.auth.dto.UserUpdateDTO;
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.enums.UserRole;
 import com.chaoxingweb.auth.enums.UserStatus;
-import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
-import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
-import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
 import com.chaoxingweb.common.exception.BusinessException;
 import com.chaoxingweb.auth.repository.UserRepository;
 import com.chaoxingweb.auth.service.UserService;
@@ -37,7 +33,6 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final ChaoxingFacade chaoxingFacade;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -163,82 +158,84 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
     }
 
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void bindChaoxingAccount(BindChaoxingDTO dto) {
-        log.info("开始绑定超星账号: useCookie={}", dto.isUseCookie());
+    // TODO: 绑定超星账号功能已移动到 course 模块的 AccountBindingService
+    // @Override
+    // @Transactional(rollbackFor = Exception.class)
+    // public void bindChaoxingAccount(BindChaoxingDTO dto) {
+    //     log.info("开始绑定超星账号: useCookie={}", dto.isUseCookie());
+    //
+    //     // 1. 获取当前用户
+    //     User user = getCurrentUserEntity();
+    //
+    //     // 2. 检查是否已绑定超星账号
+    //     if (user.getChaoxingUsername() != null && !user.getChaoxingUsername().isEmpty()) {
+    //         throw new BusinessException("已绑定超星账号，请先解绑");
+    //     }
+    //
+    //     // 3. 构造超星登录 DTO
+    //     ChaoxingLoginDTO chaoxingLoginDTO = new ChaoxingLoginDTO();
+    //     chaoxingLoginDTO.setUseCookie(dto.isUseCookie());
+    //
+    //     if (dto.isUseCookie()) {
+    //         // Cookie 登录
+    //         chaoxingLoginDTO.setCookie(dto.getChaoxingCookie());
+    //     } else {
+    //         // 账号密码登录
+    //         chaoxingLoginDTO.setUsername(dto.getChaoxingUsername());
+    //         chaoxingLoginDTO.setPassword(dto.getChaoxingPassword());
+    //     }
+    //
+    //     // 4. 调用超星登录验证
+    //     ChaoxingLoginResult chaoxingResult = chaoxingFacade.login(chaoxingLoginDTO);
+    //
+    //     // 5. 检查登录结果
+    //     if (!chaoxingResult.isSuccess()) {
+    //         log.error("超星登录失败: {}", chaoxingResult.getErrorMessage());
+    //         throw new BusinessException("超星登录失败: " + chaoxingResult.getErrorMessage());
+    //     }
+    //
+    //     // 6. 保存超星账号信息
+    //     if (dto.isUseCookie()) {
+    //         user.setChaoxingCookie(dto.getChaoxingCookie());
+    //         // Cookie 登录时，从登录结果中提取用户名（如果有的话）
+    //         if (chaoxingResult.getChaoxingUsername() != null && !chaoxingResult.getChaoxingUsername().isEmpty()) {
+    //             user.setChaoxingUsername(chaoxingResult.getChaoxingUsername());
+    //         } else {
+    //             user.setChaoxingUsername("COOKIE_USER_" + user.getId());
+    //         }
+    //     } else {
+    //         user.setChaoxingUsername(dto.getChaoxingUsername());
+    //         user.setChaoxingCookie(chaoxingResult.getCookie());
+    //     }
+    //
+    //     // 7. 保存用户
+    //     userRepository.save(user);
+    //
+    //     log.info("超星账号绑定成功: chaoxingUsername={}", user.getChaoxingUsername());
+    // }
 
-        // 1. 获取当前用户
-        User user = getCurrentUserEntity();
-
-        // 2. 检查是否已绑定超星账号
-        if (user.getChaoxingUsername() != null && !user.getChaoxingUsername().isEmpty()) {
-            throw new BusinessException("已绑定超星账号，请先解绑");
-        }
-
-        // 3. 构造超星登录 DTO
-        ChaoxingLoginDTO chaoxingLoginDTO = new ChaoxingLoginDTO();
-        chaoxingLoginDTO.setUseCookie(dto.isUseCookie());
-
-        if (dto.isUseCookie()) {
-            // Cookie 登录
-            chaoxingLoginDTO.setCookie(dto.getChaoxingCookie());
-        } else {
-            // 账号密码登录
-            chaoxingLoginDTO.setUsername(dto.getChaoxingUsername());
-            chaoxingLoginDTO.setPassword(dto.getChaoxingPassword());
-        }
-
-        // 4. 调用超星登录验证
-        ChaoxingLoginResult chaoxingResult = chaoxingFacade.login(chaoxingLoginDTO);
-
-        // 5. 检查登录结果
-        if (!chaoxingResult.isSuccess()) {
-            log.error("超星登录失败: {}", chaoxingResult.getErrorMessage());
-            throw new BusinessException("超星登录失败: " + chaoxingResult.getErrorMessage());
-        }
-
-        // 6. 保存超星账号信息
-        if (dto.isUseCookie()) {
-            user.setChaoxingCookie(dto.getChaoxingCookie());
-            // Cookie 登录时，从登录结果中提取用户名（如果有的话）
-            if (chaoxingResult.getChaoxingUsername() != null && !chaoxingResult.getChaoxingUsername().isEmpty()) {
-                user.setChaoxingUsername(chaoxingResult.getChaoxingUsername());
-            } else {
-                user.setChaoxingUsername("COOKIE_USER_" + user.getId());
-            }
-        } else {
-            user.setChaoxingUsername(dto.getChaoxingUsername());
-            user.setChaoxingCookie(chaoxingResult.getCookie());
-        }
-
-        // 7. 保存用户
-        userRepository.save(user);
-
-        log.info("超星账号绑定成功: chaoxingUsername={}", user.getChaoxingUsername());
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void unbindChaoxingAccount() {
-        log.info("开始解绑超星账号");
-
-        // 1. 获取当前用户
-        User user = getCurrentUserEntity();
-
-        // 2. 检查是否已绑定超星账号
-        if (user.getChaoxingUsername() == null || user.getChaoxingUsername().isEmpty()) {
-            throw new BusinessException("未绑定超星账号");
-        }
-
-        // 3. 清空超星账号信息
-        String oldChaoxingUsername = user.getChaoxingUsername();
-        user.setChaoxingUsername(null);
-        user.setChaoxingCookie(null);
-
-        // 4. 保存用户
-        userRepository.save(user);
-
-        log.info("超星账号解绑成功: chaoxingUsername={}", oldChaoxingUsername);
-    }
+    // TODO: 解绑超星账号功能已移动到 course 模块的 AccountBindingService
+    // @Override
+    // @Transactional(rollbackFor = Exception.class)
+    // public void unbindChaoxingAccount() {
+    //     log.info("开始解绑超星账号");
+    //
+    //     // 1. 获取当前用户
+    //     User user = getCurrentUserEntity();
+    //
+    //     // 2. 检查是否已绑定超星账号
+    //     if (user.getChaoxingUsername() == null || user.getChaoxingUsername().isEmpty()) {
+    //         throw new BusinessException("未绑定超星账号");
+    //     }
+    //
+    //     // 3. 清空超星账号信息
+    //     String oldChaoxingUsername = user.getChaoxingUsername();
+    //     user.setChaoxingUsername(null);
+    //     user.setChaoxingCookie(null);
+    //
+    //     // 4. 保存用户
+    //     userRepository.save(user);
+    //
+    //     log.info("超星账号解绑成功: chaoxingUsername={}", oldChaoxingUsername);
+    // }
 }

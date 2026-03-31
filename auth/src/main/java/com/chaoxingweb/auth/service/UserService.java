@@ -1,6 +1,5 @@
 package com.chaoxingweb.auth.service;
 
-import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;
@@ -39,13 +38,15 @@ public interface UserService {
      */
     void changePassword(ChangePasswordDTO dto);
 
-    /**
-     * 绑定超星账号
-     */
-    void bindChaoxingAccount(BindChaoxingDTO dto);
+    // TODO: 绑定超星账号功能已移动到 course 模块的 AccountBindingService
+    // /**
+    //  * 绑定超星账号
+    //  */
+    // void bindChaoxingAccount(BindChaoxingDTO dto);
 
-    /**
-     * 解绑超星账号
-     */
-    void unbindChaoxingAccount();
+    // TODO: 解绑超星账号功能已移动到 course 模块的 AccountBindingService
+    // /**
+    //  * 解绑超星账号
+    //  */
+    // void unbindChaoxingAccount();
 }

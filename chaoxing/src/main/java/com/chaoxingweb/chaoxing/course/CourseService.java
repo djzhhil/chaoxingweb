@@ -20,6 +20,14 @@ public interface CourseService {
     List<CourseDTO> getCourseList();
 
     /**
+     * 获取课程详情
+     *
+     * @param courseId 课程 ID
+     * @return 课程详情
+     */
+    CourseDTO getCourseDetail(String courseId);
+
+    /**
      * 获取课程章节
      *
      * @param courseId 课程 ID

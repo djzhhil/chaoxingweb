@@ -24,12 +24,6 @@
             <artifactId>common</artifactId>
         </dependency>
 
-        <!-- Chaoxing Module -->
-        <dependency>
-            <groupId>com.chaoxingweb</groupId>
-            <artifactId>chaoxing</artifactId>
-        </dependency>
-
         <!-- Spring Boot Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

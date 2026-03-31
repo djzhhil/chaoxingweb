@@ -2,6 +2,9 @@ package com.chaoxingweb.chaoxing.facade;
 
 import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
 import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
+import com.chaoxingweb.chaoxing.vo.CourseVO;
+
+import java.util.List;
 
 /**
  * 超星模块 Facade
@@ -20,4 +23,19 @@ public interface ChaoxingFacade {
      * @return 登录结果（VO - 外部视图展示）
      */
     ChaoxingLoginResult login(ChaoxingLoginDTO dto);
+
+    /**
+     * 获取课程列表
+     *
+     * @return 课程列表
+     */
+    List<CourseVO> getCourseList();
+
+    /**
+     * 获取课程详情
+     *
+     * @param courseId 课程 ID
+     * @return 课程详情
+     */
+    CourseVO getCourseDetail(String courseId);
 }
