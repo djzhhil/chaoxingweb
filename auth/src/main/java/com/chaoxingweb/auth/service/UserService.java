@@ -43,4 +43,9 @@ public interface UserService {
      * 绑定超星账号
      */
     void bindChaoxingAccount(BindChaoxingDTO dto);
+
+    /**
+     * 解绑超星账号
+     */
+    void unbindChaoxingAccount();
 }

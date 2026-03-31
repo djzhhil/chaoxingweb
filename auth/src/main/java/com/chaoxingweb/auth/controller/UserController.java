@@ -76,4 +76,13 @@ public class UserController {
         userService.bindChaoxingAccount(dto);
         return Result.success();
     }
+
+    /**
+     * 解绑超星账号
+     */
+    @PostMapping("/unbind-chaoxing")
+    public Result<Void> unbindChaoxingAccount() {
+        userService.unbindChaoxingAccount();
+        return Result.success();
+    }
 }

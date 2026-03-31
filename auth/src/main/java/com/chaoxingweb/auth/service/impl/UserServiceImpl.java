@@ -102,7 +102,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserVO getCurrentUser() {
         User user = getCurrentUserEntity();
-        return BeanUtil.copyProperties(user, UserVO.class);
+        UserVO userVO = BeanUtil.copyProperties(user, UserVO.class);
+
+        // 设置是否已绑定超星账号
+        userVO.setChaoxingBound(user.getChaoxingUsername() != null && !user.getChaoxingUsername().isEmpty());
+
+        return userVO;
     }
 
     /**
@@ -211,5 +216,29 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         log.info("超星账号绑定成功: chaoxingUsername={}", user.getChaoxingUsername());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void unbindChaoxingAccount() {
+        log.info("开始解绑超星账号");
+
+        // 1. 获取当前用户
+        User user = getCurrentUserEntity();
+
+        // 2. 检查是否已绑定超星账号
+        if (user.getChaoxingUsername() == null || user.getChaoxingUsername().isEmpty()) {
+            throw new BusinessException("未绑定超星账号");
+        }
+
+        // 3. 清空超星账号信息
+        String oldChaoxingUsername = user.getChaoxingUsername();
+        user.setChaoxingUsername(null);
+        user.setChaoxingCookie(null);
+
+        // 4. 保存用户
+        userRepository.save(user);
+
+        log.info("超星账号解绑成功: chaoxingUsername={}", oldChaoxingUsername);
     }
 }
