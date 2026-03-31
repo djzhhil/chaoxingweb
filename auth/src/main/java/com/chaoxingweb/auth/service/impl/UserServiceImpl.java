@@ -189,16 +189,16 @@ public class UserServiceImpl implements UserService {
 
         // 5. 检查登录结果
         if (!chaoxingResult.isSuccess()) {
-            log.error("超星登录失败: {}", chaoxingResult.getMessage());
-            throw new BusinessException("超星登录失败: " + chaoxingResult.getMessage());
+            log.error("超星登录失败: {}", chaoxingResult.getErrorMessage());
+            throw new BusinessException("超星登录失败: " + chaoxingResult.getErrorMessage());
         }
 
         // 6. 保存超星账号信息
         if (dto.isUseCookie()) {
             user.setChaoxingCookie(dto.getChaoxingCookie());
             // Cookie 登录时，从登录结果中提取用户名（如果有的话）
-            if (chaoxingResult.getToken() != null && !chaoxingResult.getToken().isEmpty()) {
-                user.setChaoxingUsername(chaoxingResult.getToken());
+            if (chaoxingResult.getChaoxingUsername() != null && !chaoxingResult.getChaoxingUsername().isEmpty()) {
+                user.setChaoxingUsername(chaoxingResult.getChaoxingUsername());
             } else {
                 user.setChaoxingUsername("COOKIE_USER_" + user.getId());
             }
