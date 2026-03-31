@@ -5,7 +5,7 @@ import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.converter.CourseConverter;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
-import com.chaoxingweb.chaoxing.course.CourseService;
+import com.chaoxingweb.chaoxing.course.ChaoxingCourseService;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 课程服务实现
+ * 超星课程服务实现
  *
  * @author 小克 🐕💎
  * @since 2026-03-31
@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CourseServiceImpl implements CourseService {
+public class ChaoxingCourseServiceImpl implements ChaoxingCourseService {
 
     private final ChaoxingApiClient chaoxingApiClient;
     private final CourseAdapter courseAdapter;

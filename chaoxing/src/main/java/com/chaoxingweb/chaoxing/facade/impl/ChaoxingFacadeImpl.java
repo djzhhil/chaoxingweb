@@ -2,7 +2,7 @@ package com.chaoxingweb.chaoxing.facade.impl;
 
 import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.converter.CourseConverter;
-import com.chaoxingweb.chaoxing.course.CourseService;
+import com.chaoxingweb.chaoxing.course.ChaoxingCourseService;
 import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class ChaoxingFacadeImpl implements ChaoxingFacade {
 
     private final LoginService loginService;
-    private final CourseService courseService;
+    private final ChaoxingCourseService chaoxingCourseService;
     private final CourseConverter courseConverter;
 
     @Override
@@ -70,7 +70,7 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
 
         try {
             // 调用课程服务
-            List<CourseDTO> courseDTOs = courseService.getCourseList();
+            List<CourseDTO> courseDTOs = chaoxingCourseService.getCourseList();
 
             // 使用转换器转换为 VO
             List<CourseVO> courseVOs = courseDTOs.stream()
@@ -92,7 +92,7 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
 
         try {
             // 调用课程服务
-            CourseDTO courseDTO = courseService.getCourseDetail(courseId);
+            CourseDTO courseDTO = chaoxingCourseService.getCourseDetail(courseId);
 
             // 使用转换器转换为 VO
             CourseVO courseVO = courseConverter.toVO(courseDTO);

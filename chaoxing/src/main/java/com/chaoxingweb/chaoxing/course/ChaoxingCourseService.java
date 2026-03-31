@@ -5,12 +5,12 @@ import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import java.util.List;
 
 /**
- * 课程服务接口
+ * 超星课程服务接口
  *
  * @author 小克 🐕💎
  * @since 2026-03-31
  */
-public interface CourseService {
+public interface ChaoxingCourseService {
 
     /**
      * 获取课程列表
