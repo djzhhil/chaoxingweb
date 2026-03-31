@@ -1,4 +1,4 @@
-package com.chaoxingweb.chaoxing.controller;
+package com.chaoxingweb.app.controller;
 
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.course.CourseService;
