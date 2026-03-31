@@ -4,6 +4,7 @@ import com.chaoxingweb.chaoxing.auth.LoginService;
 import com.chaoxingweb.chaoxing.core.AccountManager;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
@@ -39,14 +40,10 @@ public class LoginServiceImpl implements LoginService {
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
 
-    private final OkHttpClient httpClient;
+    private OkHttpClient httpClient;
 
-    public LoginServiceImpl(AccountManager accountManager, SessionManager sessionManager,
-                           CipherManager cipherManager) {
-        this.accountManager = accountManager;
-        this.sessionManager = sessionManager;
-        this.cipherManager = cipherManager;
-
+    @PostConstruct
+    public void init() {
         // 创建 OkHttpClient
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
