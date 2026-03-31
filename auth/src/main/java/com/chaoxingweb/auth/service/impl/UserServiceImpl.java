@@ -1,6 +1,7 @@
 package com.chaoxingweb.auth.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;
@@ -8,6 +9,9 @@ import com.chaoxingweb.auth.dto.UserUpdateDTO;
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.enums.UserRole;
 import com.chaoxingweb.auth.enums.UserStatus;
+import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
+import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
+import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
 import com.chaoxingweb.common.exception.BusinessException;
 import com.chaoxingweb.auth.repository.UserRepository;
 import com.chaoxingweb.auth.service.UserService;
@@ -15,6 +19,7 @@ import com.chaoxingweb.auth.util.JwtTokenProvider;
 import com.chaoxingweb.auth.vo.LoginResult;
 import com.chaoxingweb.auth.vo.UserVO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 用户服务实现
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -31,6 +37,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final ChaoxingFacade chaoxingFacade;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -149,5 +156,60 @@ public class UserServiceImpl implements UserService {
         // 更新密码
         user.setPassword(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void bindChaoxingAccount(BindChaoxingDTO dto) {
+        log.info("开始绑定超星账号: useCookie={}", dto.isUseCookie());
+
+        // 1. 获取当前用户
+        User user = getCurrentUserEntity();
+
+        // 2. 检查是否已绑定超星账号
+        if (user.getChaoxingUsername() != null && !user.getChaoxingUsername().isEmpty()) {
+            throw new BusinessException("已绑定超星账号，请先解绑");
+        }
+
+        // 3. 构造超星登录 DTO
+        ChaoxingLoginDTO chaoxingLoginDTO = new ChaoxingLoginDTO();
+        chaoxingLoginDTO.setUseCookie(dto.isUseCookie());
+
+        if (dto.isUseCookie()) {
+            // Cookie 登录
+            chaoxingLoginDTO.setCookie(dto.getChaoxingCookie());
+        } else {
+            // 账号密码登录
+            chaoxingLoginDTO.setUsername(dto.getChaoxingUsername());
+            chaoxingLoginDTO.setPassword(dto.getChaoxingPassword());
+        }
+
+        // 4. 调用超星登录验证
+        ChaoxingLoginResult chaoxingResult = chaoxingFacade.login(chaoxingLoginDTO);
+
+        // 5. 检查登录结果
+        if (!chaoxingResult.isSuccess()) {
+            log.error("超星登录失败: {}", chaoxingResult.getMessage());
+            throw new BusinessException("超星登录失败: " + chaoxingResult.getMessage());
+        }
+
+        // 6. 保存超星账号信息
+        if (dto.isUseCookie()) {
+            user.setChaoxingCookie(dto.getChaoxingCookie());
+            // Cookie 登录时，从登录结果中提取用户名（如果有的话）
+            if (chaoxingResult.getToken() != null && !chaoxingResult.getToken().isEmpty()) {
+                user.setChaoxingUsername(chaoxingResult.getToken());
+            } else {
+                user.setChaoxingUsername("COOKIE_USER_" + user.getId());
+            }
+        } else {
+            user.setChaoxingUsername(dto.getChaoxingUsername());
+            user.setChaoxingCookie(chaoxingResult.getCookie());
+        }
+
+        // 7. 保存用户
+        userRepository.save(user);
+
+        log.info("超星账号绑定成功: chaoxingUsername={}", user.getChaoxingUsername());
     }
 }

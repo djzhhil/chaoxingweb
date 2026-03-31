@@ -1,5 +1,6 @@
 package com.chaoxingweb.auth.controller;
 
+import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.common.result.Result;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
@@ -64,6 +65,15 @@ public class UserController {
     @PostMapping("/change-password")
     public Result<Void> changePassword(@Valid @RequestBody ChangePasswordDTO dto) {
         userService.changePassword(dto);
+        return Result.success();
+    }
+
+    /**
+     * 绑定超星账号
+     */
+    @PostMapping("/bind-chaoxing")
+    public Result<Void> bindChaoxingAccount(@Valid @RequestBody BindChaoxingDTO dto) {
+        userService.bindChaoxingAccount(dto);
         return Result.success();
     }
 }

@@ -31,6 +31,18 @@ public class User {
     @Column(length = 100)
     private String email;
 
+    /**
+     * 超星用户名
+     */
+    @Column(name = "chaoxing_username", length = 50)
+    private String chaoxingUsername;
+
+    /**
+     * 超星 Cookie
+     */
+    @Column(name = "chaoxing_cookie", columnDefinition = "TEXT")
+    private String chaoxingCookie;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private UserRole role = UserRole.USER;

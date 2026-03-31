@@ -1,5 +1,6 @@
 package com.chaoxingweb.auth.service;
 
+import com.chaoxingweb.auth.dto.BindChaoxingDTO;
 import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;
@@ -37,4 +38,9 @@ public interface UserService {
      * 修改密码
      */
     void changePassword(ChangePasswordDTO dto);
+
+    /**
+     * 绑定超星账号
+     */
+    void bindChaoxingAccount(BindChaoxingDTO dto);
 }
