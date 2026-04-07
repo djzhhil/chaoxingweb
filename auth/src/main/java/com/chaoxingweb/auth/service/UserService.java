@@ -37,16 +37,4 @@ public interface UserService {
      * 修改密码
      */
     void changePassword(ChangePasswordDTO dto);
-
-    // TODO: 绑定超星账号功能已移动到 course 模块的 AccountBindingService
-    // /**
-    //  * 绑定超星账号
-    //  */
-    // void bindChaoxingAccount(BindChaoxingDTO dto);
-
-    // TODO: 解绑超星账号功能已移动到 course 模块的 AccountBindingService
-    // /**
-    //  * 解绑超星账号
-    //  */
-    // void unbindChaoxingAccount();
 }

@@ -66,24 +66,4 @@ public class UserController {
         userService.changePassword(dto);
         return Result.success();
     }
-
-    // TODO: 绑定超星账号功能已移动到 course 模块的 AccountBindingService
-    // /**
-    //  * 绑定超星账号
-    //  */
-    // @PostMapping("/bind-chaoxing")
-    // public Result<Void> bindChaoxingAccount(@Valid @RequestBody BindChaoxingDTO dto) {
-    //     userService.bindChaoxingAccount(dto);
-    //     return Result.success();
-    // }
-
-    // TODO: 解绑超星账号功能已移动到 course 模块的 AccountBindingService
-    // /**
-    //  * 解绑超星账号
-    //  */
-    // @PostMapping("/unbind-chaoxing")
-    // public Result<Void> unbindChaoxingAccount() {
-    //     userService.unbindChaoxingAccount();
-    //     return Result.success();
-    // }
 }
