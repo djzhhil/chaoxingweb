@@ -1,18 +1,25 @@
 package com.chaoxingweb.chaoxing.facade.impl;
 
 import com.chaoxingweb.auth.service.LoginService;
+import com.chaoxingweb.chaoxing.converter.ChapterConverter;
 import com.chaoxingweb.chaoxing.converter.CourseConverter;
+import com.chaoxingweb.chaoxing.course.ChaoxingChapterService;
 import com.chaoxingweb.chaoxing.course.ChaoxingCourseService;
 import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
+import com.chaoxingweb.chaoxing.dto.ChapterDTO;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
+import com.chaoxingweb.chaoxing.vo.ChapterVO;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -30,7 +37,9 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
 
     private final LoginService loginService;
     private final ChaoxingCourseService chaoxingCourseService;
+    private final ChaoxingChapterService chaoxingChapterService;
     private final CourseConverter courseConverter;
+    private final ChapterConverter chapterConverter;
 
     @Override
     public ChaoxingLoginResult login(ChaoxingLoginDTO dto) {
@@ -103,6 +112,81 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
         } catch (Exception e) {
             log.error("获取课程详情失败: courseId={}", courseId, e);
             throw new RuntimeException("获取课程详情失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public List<ChapterVO> getChapterList(String courseId, String clazzId, String cpi) {
+        log.info("开始获取课程章节列表: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+        try {
+            // 调用章节服务
+            List<ChapterDTO> chapterDTOs = chaoxingChapterService.getChapterList(courseId, clazzId, cpi);
+
+            // 使用转换器转换为 VO
+            List<ChapterVO> chapterVOs = chapterDTOs.stream()
+                    .map(chapterConverter::toVO)
+                    .collect(Collectors.toList());
+
+            log.info("章节列表获取成功，共{}个章节", chapterVOs.size());
+            return chapterVOs;
+
+        } catch (Exception e) {
+            log.error("获取章节列表失败: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi, e);
+            throw new RuntimeException("获取章节列表失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Map<String, Object> getChapterDetail(String courseId, String clazzId, String cpi) {
+        log.info("开始获取课程章节详情: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+        try {
+            // 调用章节服务获取详细信息
+            Map<String, Object> detail = chaoxingChapterService.getChapterDetail(courseId, clazzId, cpi);
+
+            // 转换章节列表为 VO
+            @SuppressWarnings("unchecked")
+            List<ChapterDTO> chapterDTOs = (List<ChapterDTO>) detail.get("points");
+            
+            List<ChapterVO> chapterVOs = new ArrayList<>();
+            if (chapterDTOs != null) {
+                chapterVOs = chapterDTOs.stream()
+                        .map(chapterConverter::toVO)
+                        .collect(Collectors.toList());
+            }
+
+            // 计算统计信息
+            int totalChapters = chapterVOs.size();
+            long completedCount = chapterVOs.stream()
+                    .filter(ch -> "completed".equals(ch.getStatus()))
+                    .count();
+            long lockedCount = chapterVOs.stream()
+                    .filter(ch -> "locked".equals(ch.getStatus()))
+                    .count();
+            long activeCount = chapterVOs.stream()
+                    .filter(ch -> "active".equals(ch.getStatus()))
+                    .count();
+            
+            int progress = totalChapters > 0 ? (int) ((completedCount * 100) / totalChapters) : 0;
+
+            // 构造返回结果
+            Map<String, Object> result = new HashMap<>();
+            result.put("hasLocked", detail.get("hasLocked"));
+            result.put("totalChapters", totalChapters);
+            result.put("completedChapters", completedCount);
+            result.put("lockedChapters", lockedCount);
+            result.put("activeChapters", activeCount);
+            result.put("progress", progress);
+            result.put("chapters", chapterVOs);
+
+            log.info("章节详情获取成功: courseId={}, clazzId={}, cpi={}, 进度={}%, 已完成={}/{}",
+                    courseId, clazzId, cpi, progress, completedCount, totalChapters);
+            return result;
+
+        } catch (Exception e) {
+            log.error("获取章节详情失败: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi, e);
+            throw new RuntimeException("获取章节详情失败: " + e.getMessage());
         }
     }
 }

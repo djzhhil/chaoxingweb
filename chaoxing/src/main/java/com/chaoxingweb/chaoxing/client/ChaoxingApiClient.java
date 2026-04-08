@@ -10,6 +10,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 超星 API 客户端
@@ -28,6 +29,9 @@ import java.util.List;
 public class ChaoxingApiClient {
 
     private static final String COURSE_LIST_URL = "https://mooc2-ans.chaoxing.com/mooc2-ans/visit/courselistdata";
+    private static final String COURSE_POINT_URL = "https://mooc2-ans.chaoxing.com/mooc2-ans/mycourse/studentcourse";
+    private static final String JOB_CARDS_URL = "https://mooc1.chaoxing.com/mooc-ans/knowledge/cards";
+    private static final String VIDEO_LOG_URL = "https://mooc1.chaoxing.com/mooc-ans/multimedia/log/a/";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36";
 
     private final SessionManager sessionManager;
@@ -126,6 +130,164 @@ public class ChaoxingApiClient {
 
         } catch (Exception e) {
             log.debug("Cookie 验证异常", e);
+            return false;
+        }
+    }
+
+    /**
+     * 获取课程章节列表 HTML
+     *
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param cpi CPI
+     * @return 章节列表 HTML
+     */
+    public String getCoursePointHtml(String courseId, String clazzId, String cpi) {
+        try {
+            log.info("开始获取课程章节列表: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法获取章节列表");
+                return "";
+            }
+
+            // 构造URL
+            String url = String.format("%s?courseid=%s&clazzid=%s&cpi=%s&ut=s", 
+                    COURSE_POINT_URL, courseId, clazzId, cpi);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("获取章节列表失败，状态码：{}", response.getStatusCode());
+                return "";
+            }
+
+            log.info("章节列表获取成功");
+            return response.getBody();
+
+        } catch (Exception e) {
+            log.error("获取章节列表异常", e);
+            return "";
+        }
+    }
+
+    /**
+     * 获取章节任务卡片 HTML
+     *
+     * @param clazzId 班级ID
+     * @param courseId 课程ID
+     * @param knowledgeId 知识点ID（章节ID）
+     * @param cpi CPI
+     * @param num 任务数量（0-6）
+     * @return 任务卡片 HTML
+     */
+    public String getJobCardsHtml(String clazzId, String courseId, String knowledgeId, String cpi, String num) {
+        try {
+            log.trace("开始获取任务卡片: courseId={}, clazzId={}, knowledgeId={}, num={}", 
+                    courseId, clazzId, knowledgeId, num);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法获取任务卡片");
+                return "";
+            }
+
+            // 构造URL参数
+            String url = String.format("%s?clazzid=%s&courseid=%s&knowledgeid=%s&ut=s&cpi=%s&v=2025-0424-1038-3&mooc2=1&num=%s",
+                    JOB_CARDS_URL, clazzId, courseId, knowledgeId, cpi, num);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("获取任务卡片失败，状态码：{}", response.getStatusCode());
+                return "";
+            }
+
+            log.trace("任务卡片获取成功");
+            return response.getBody();
+
+        } catch (Exception e) {
+            log.error("获取任务卡片异常", e);
+            return "";
+        }
+    }
+
+    /**
+     * 上报视频学习进度
+     *
+     * @param cpi CPI
+     * @param dtoken 文档token
+     * @param params 请求参数
+     * @return 是否成功
+     */
+    public boolean reportVideoProgress(String cpi, String dtoken, Map<String, String> params) {
+        try {
+            log.trace("上报视频进度: cpi={}, dtoken={}", cpi, dtoken);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法上报进度");
+                return false;
+            }
+
+            // 构造URL
+            String url = String.format("%s%s/%s", VIDEO_LOG_URL, cpi, dtoken);
+
+            // 构造请求参数
+            MultiValueMap<String, String> data = new LinkedMultiValueMap<>();
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                data.add(entry.getKey(), entry.getValue());
+            }
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("Referer", "https://mooc1.chaoxing.com/");
+
+            // 发送POST请求
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(data, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("上报视频进度失败，状态码：{}", response.getStatusCode());
+                return false;
+            }
+
+            // 检查响应内容
+            String responseBody = response.getBody();
+            if (responseBody != null && responseBody.contains("error")) {
+                log.warn("上报视频进度返回错误: {}", responseBody);
+                return false;
+            }
+
+            log.trace("视频进度上报成功");
+            return true;
+
+        } catch (Exception e) {
+            log.error("上报视频进度异常", e);
             return false;
         }
     }

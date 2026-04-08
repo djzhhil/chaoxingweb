@@ -12,9 +12,13 @@ public class ChapterDTO {
     private String title;
     private String courseId;
     private String clazzId;
+    private String cpi;
     private String parentId;
     private int level;
     private String status;
+    private int jobCount;
+    private boolean hasFinished;
+    private boolean needUnlock;
 
     public ChapterDTO() {
     }
@@ -78,5 +82,37 @@ public class ChapterDTO {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCpi() {
+        return cpi;
+    }
+
+    public void setCpi(String cpi) {
+        this.cpi = cpi;
+    }
+
+    public int getJobCount() {
+        return jobCount;
+    }
+
+    public void setJobCount(int jobCount) {
+        this.jobCount = jobCount;
+    }
+
+    public boolean isHasFinished() {
+        return hasFinished;
+    }
+
+    public void setHasFinished(boolean hasFinished) {
+        this.hasFinished = hasFinished;
+    }
+
+    public boolean isNeedUnlock() {
+        return needUnlock;
+    }
+
+    public void setNeedUnlock(boolean needUnlock) {
+        this.needUnlock = needUnlock;
     }
 }

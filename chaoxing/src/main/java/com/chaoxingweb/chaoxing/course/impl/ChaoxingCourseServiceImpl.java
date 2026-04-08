@@ -5,6 +5,7 @@ import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.converter.CourseConverter;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
+import com.chaoxingweb.chaoxing.course.ChaoxingChapterService;
 import com.chaoxingweb.chaoxing.course.ChaoxingCourseService;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ChaoxingCourseServiceImpl implements ChaoxingCourseService {
     private final CourseAdapter courseAdapter;
     private final CourseConverter courseConverter;
     private final SessionManager sessionManager;
+    private final ChaoxingChapterService chapterService;
 
     @Override
     public List<CourseDTO> getCourseList() {
@@ -65,8 +67,26 @@ public class ChaoxingCourseServiceImpl implements ChaoxingCourseService {
 
     @Override
     public List<CourseDTO> getCoursePoint(String courseId, String clazzId, String cpi) {
-        // TODO: 实现获取课程章节逻辑
-        log.info("获取课程章节功能待实现");
-        return new ArrayList<>();
+        try {
+            log.info("开始获取课程章节: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+            // 调用章节服务获取章节列表
+            return chapterService.getChapterList(courseId, clazzId, cpi)
+                    .stream()
+                    .map(chapter -> {
+                        // 将 ChapterDTO 转换为 CourseDTO（临时方案，保持接口兼容）
+                        CourseDTO courseDTO = new CourseDTO();
+                        courseDTO.setCourseId(chapter.getCourseId());
+                        courseDTO.setClazzId(chapter.getClazzId());
+                        courseDTO.setCpi(chapter.getCpi());
+                        courseDTO.setCourseName(chapter.getTitle());
+                        return courseDTO;
+                    })
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            log.error("获取课程章节异常", e);
+            return new ArrayList<>();
+        }
     }
 }
