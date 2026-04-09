@@ -23,6 +23,7 @@ public class JobDTO {
     
     // 视频学习相关字段
     private String objectId;           // 对象ID，用于视频进度上报
+    private String mid;                // 媒体ID（视频/直播）
     private String otherinfo;          // 其他信息字符串，包含rt等参数
     private String dtoken;             // 文档/视频token
     private double duration;           // 视频总时长（秒）
@@ -41,6 +42,14 @@ public class JobDTO {
     // 测验相关字段
     private String ktoken;             // 知识点token（用于测验）
     private String enc;                // 加密参数（用于测验）
+    
+    // 直播相关字段
+    private String liveId;             // 直播ID
+    private String streamName;         // 流名称
+    private String vdoid;              // 视频对象ID
+    
+    // 音频相关字段
+    private String audioObjectId;      // 音频对象ID
 
     public JobDTO() {
     }
@@ -249,5 +258,45 @@ public class JobDTO {
 
     public void setEnc(String enc) {
         this.enc = enc;
+    }
+
+    public String getLiveId() {
+        return liveId;
+    }
+
+    public void setLiveId(String liveId) {
+        this.liveId = liveId;
+    }
+
+    public String getStreamName() {
+        return streamName;
+    }
+
+    public void setStreamName(String streamName) {
+        this.streamName = streamName;
+    }
+
+    public String getVdoid() {
+        return vdoid;
+    }
+
+    public void setVdoid(String vdoid) {
+        this.vdoid = vdoid;
+    }
+
+    public String getAudioObjectId() {
+        return audioObjectId;
+    }
+
+    public void setAudioObjectId(String audioObjectId) {
+        this.audioObjectId = audioObjectId;
+    }
+
+    public String getMid() {
+        return mid;
+    }
+
+    public void setMid(String mid) {
+        this.mid = mid;
     }
 }

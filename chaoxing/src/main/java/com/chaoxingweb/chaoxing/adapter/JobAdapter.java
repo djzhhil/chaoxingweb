@@ -208,14 +208,22 @@ public class JobAdapter {
             JobDTO job = new JobDTO();
             job.setJobId(getStringValue(card, "jobid", String.valueOf(card.has("id") ? card.get("id").asLong() : "")));
             job.setJobName(getStringValue(property, "title", getStringValue(property, "name", "未知直播")));
-            job.setJobType(JobType.VIDEO); // 直播暂时归类为视频类型
+            job.setJobType(JobType.LIVE); // 修正：使用LIVE类型
             job.setType("live");
             
             // 设置额外参数
             job.setJtoken(getStringValue(card, "jtoken", ""));
+            job.setOtherinfo(getStringValue(card, "otherInfo", ""));
             
-            // 可以在这里添加更多直播特有字段
-            log.debug("解析直播任务: {}", job.getJobName());
+            // 设置直播特有字段
+            job.setLiveId(getStringValue(property, "liveId", ""));
+            job.setStreamName(getStringValue(property, "streamName", ""));
+            job.setVdoid(getStringValue(property, "vdoid", ""));
+            job.setObjectId(getStringValue(card, "objectId", ""));
+            job.setMid(getStringValue(card, "mid", ""));
+            
+            log.debug("解析直播任务: {}, liveId={}, streamName={}", 
+                    job.getJobName(), job.getLiveId(), job.getStreamName());
             
             return job;
 

@@ -52,6 +52,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final UserRepository userRepository; // 注入用户仓库,获取超星Cookie
     private final TikuService tikuService; // 注入题库服务
     private final AnswerMatcher answerMatcher; // 注入答案匹配器
+    private final LiveService liveService; // 注入直播服务
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Random random = new Random();
@@ -785,6 +786,23 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     }
 
     @Override
+    public StudyResultDTO studyLive(JobDTO job) {
+        log.info("📺 开始学习直播任务: jobId={}, jobName={}", job.getJobId(), job.getJobName());
+
+        try {
+            // 检查并恢复会话状态
+            ensureSessionValid();
+
+            // 调用直播服务进行学习
+            return liveService.studyLive(job);
+
+        } catch (Exception e) {
+            log.error("学习直播任务异常: jobId={}", job.getJobId(), e);
+            return new StudyResultDTO(StudyResult.ERROR, "学习失败: " + e.getMessage(), job.getJobId());
+        }
+    }
+
+    @Override
     public StudyResultDTO studyJob(JobDTO job) {
         log.info("开始学习任务: jobId={}, type={}", job.getJobId(), job.getJobType());
 
@@ -798,6 +816,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             case DOCUMENT -> studyDocument(job);
             case READ -> studyRead(job);
             case WORK -> studyWork(job);
+            case LIVE -> studyLive(job);
             case EMPTY_PAGE -> studyEmptyPage(job);
             default -> {
                 log.warn("未知任务类型: {}", job.getJobType());

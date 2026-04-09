@@ -2,7 +2,9 @@ package com.chaoxingweb.app.controller;
 
 import com.chaoxingweb.chaoxing.course.ChaoxingJobService;
 import com.chaoxingweb.chaoxing.dto.JobDTO;
+import com.chaoxingweb.chaoxing.dto.LearningProgressDTO;
 import com.chaoxingweb.chaoxing.dto.StudyResultDTO;
+import com.chaoxingweb.chaoxing.service.CourseLearningService;
 import com.chaoxingweb.chaoxing.service.StudyProgressService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,11 +32,14 @@ public class JobController {
 
     private final ChaoxingJobService jobService;
     private final StudyProgressService progressService;
+    private final CourseLearningService courseLearningService;
 
     @Autowired
-    public JobController(ChaoxingJobService jobService, StudyProgressService progressService) {
+    public JobController(ChaoxingJobService jobService, StudyProgressService progressService,
+                        CourseLearningService courseLearningService) {
         this.jobService = jobService;
         this.progressService = progressService;
+        this.courseLearningService = courseLearningService;
     }
 
     /**
@@ -164,5 +169,41 @@ public class JobController {
     public SseEmitter subscribeProgress(@PathVariable String jobId) {
         logger.info("客户端订阅学习进度: jobId={}", jobId);
         return progressService.createConnection(jobId);
+    }
+
+    /**
+     * 获取学习进度报告
+     *
+     * @param courseId 课程ID
+     * @return 学习进度报告
+     */
+    @GetMapping("/progress/report/{courseId}")
+    public ResponseEntity<Map<String, Object>> getProgressReport(@PathVariable String courseId) {
+        try {
+            logger.info("收到获取学习进度报告请求: courseId={}", courseId);
+            
+            // TODO: 从缓存或数据库获取学习进度
+            Map<String, Object> result = new HashMap<>();
+            result.put("courseId", courseId);
+            result.put("message", "学习进度报告功能待实现");
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("获取学习进度报告失败", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+}
+    /**
+     * SSE订阅课程学习进度
+     *
+     * @param courseId 课程ID
+     * @return SSE连接
+     */
+    @GetMapping(value = "/progress/course/{courseId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeCourseProgress(@PathVariable String courseId) {
+        logger.info("客户端订阅课程学习进度: courseId={}", courseId);
+        return progressService.createCourseConnection(courseId);
     }
 }

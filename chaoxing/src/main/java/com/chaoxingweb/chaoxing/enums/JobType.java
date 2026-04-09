@@ -29,6 +29,16 @@ public enum JobType {
     READ,
 
     /**
+     * 直播任务
+     */
+    LIVE,
+
+    /**
+     * 音频任务
+     */
+    AUDIO,
+
+    /**
      * 空页面任务
      */
     EMPTY_PAGE,

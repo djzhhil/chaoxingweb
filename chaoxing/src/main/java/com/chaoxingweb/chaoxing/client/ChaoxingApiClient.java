@@ -675,4 +675,99 @@ public class ChaoxingApiClient {
         }
         return sb.toString();
     }
+
+    /**
+     * 获取直播状态信息
+     *
+     * @param url 直播状态查询URL
+     * @return 直播状态信息（JSON对象或null）
+     */
+    public Object getLiveStatus(String url) {
+        try {
+            log.trace("获取直播状态: {}", url);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法获取直播状态");
+                return null;
+            }
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("X-Requested-With", "XMLHttpRequest");
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.warn("获取直播状态失败，状态码：{}", response.getStatusCode());
+                return null;
+            }
+
+            // 解析JSON响应
+            String responseBody = response.getBody();
+            if (responseBody != null && !responseBody.isEmpty()) {
+                return objectMapper.readTree(responseBody);
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            log.error("获取直播状态异常", e);
+            return null;
+        }
+    }
+
+    /**
+     * 提交直播观看时长
+     *
+     * @param url 时长提交URL
+     * @return 是否成功
+     */
+    public boolean submitLiveDuration(String url) {
+        try {
+            log.trace("提交直播时长: {}", url);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法提交直播时长");
+                return false;
+            }
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.warn("提交直播时长失败，状态码：{}", response.getStatusCode());
+                return false;
+            }
+
+            // 检查响应内容（成功时返回"@success"）
+            String responseBody = response.getBody();
+            boolean success = "@success".equals(responseBody != null ? responseBody.trim() : "");
+            
+            if (success) {
+                log.debug("直播时长提交成功");
+            } else {
+                log.warn("直播时长提交响应异常: {}", responseBody);
+            }
+
+            return success;
+
+        } catch (Exception e) {
+            log.error("提交直播时长异常", e);
+            return false;
+        }
+    }
 }
