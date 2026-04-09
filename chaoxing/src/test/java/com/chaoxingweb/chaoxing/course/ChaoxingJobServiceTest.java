@@ -91,6 +91,29 @@ public class ChaoxingJobServiceTest {
     }
 
     /**
+     * 测试阅读任务学习
+     */
+    @Test
+    public void testStudyRead() {
+        JobDTO job = new JobDTO();
+        job.setJobId("test_read_job_id");
+        job.setJobName("测试阅读任务");
+        job.setJobType(JobType.READ);
+        job.setCourseId("test_course_id");
+        job.setClazzId("test_clazz_id");
+        job.setKnowledgeId("test_knowledge_id");
+        job.setJtoken("test_jtoken");
+        job.setOtherinfo("nodeId_67890-rt_1");
+
+        StudyResultDTO result = jobService.studyRead(job);
+        
+        assertNotNull(result);
+        assertNotNull(result.getResult());
+        assertNotNull(result.getMessage());
+        System.out.println("阅读任务测试结果: " + result.getResult() + " - " + result.getMessage());
+    }
+
+    /**
      * 测试学习任务
      */
     @Test

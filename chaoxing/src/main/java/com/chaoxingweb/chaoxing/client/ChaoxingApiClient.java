@@ -1,6 +1,7 @@
 package com.chaoxingweb.chaoxing.client;
 
 import com.chaoxingweb.chaoxing.core.SessionManager;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -36,6 +37,7 @@ public class ChaoxingApiClient {
 
     private final SessionManager sessionManager;
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 获取课程列表 HTML
@@ -429,6 +431,70 @@ public class ChaoxingApiClient {
 
         } catch (Exception e) {
             log.error("完成文档学习异常", e);
+            return false;
+        }
+    }
+
+    /**
+     * 完成阅读学习任务
+     *
+     * @param jobId 任务ID
+     * @param knowledgeId 知识点ID
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param jtoken 任务token
+     * @return 是否成功
+     */
+    public boolean completeReadStudy(String jobId, String knowledgeId, String courseId,
+                                     String clazzId, String jtoken) {
+        try {
+            log.info("完成阅读学习: jobId={}, knowledgeId={}", jobId, knowledgeId);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法完成阅读学习");
+                return false;
+            }
+
+            // 构造URL - 参考Python实现: https://mooc1.chaoxing.com/ananas/job/readv2
+            String url = String.format(
+                    "https://mooc1.chaoxing.com/ananas/job/readv2?jobid=%s&knowledgeid=%s&courseid=%s&clazzid=%s&jtoken=%s",
+                    jobId, knowledgeId, courseId, clazzId, jtoken);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("Referer", "https://mooc1.chaoxing.com/");
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("完成阅读学习失败，状态码：{}，响应：{}", response.getStatusCode(), response.getBody());
+                return false;
+            }
+
+            // 解析响应JSON
+            String responseBody = response.getBody();
+            if (responseBody != null && !responseBody.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    String msg = jsonNode.has("msg") ? jsonNode.get("msg").asText() : "未知";
+                    log.info("阅读任务学习完成: {}", msg);
+                } catch (Exception e) {
+                    log.debug("解析阅读任务响应失败: {}", e.getMessage());
+                }
+            }
+
+            log.trace("阅读学习完成");
+            return true;
+
+        } catch (Exception e) {
+            log.error("完成阅读学习异常: jobId={}", jobId, e);
             return false;
         }
     }

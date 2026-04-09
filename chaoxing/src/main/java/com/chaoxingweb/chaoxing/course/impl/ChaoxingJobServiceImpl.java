@@ -636,6 +636,46 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     }
 
     @Override
+    public StudyResultDTO studyRead(JobDTO job) {
+        log.info("开始学习阅读任务: jobId={}, jobName={}", job.getJobId(), job.getJobName());
+
+        try {
+            // 1. 获取知识点ID
+            String knowledgeId = job.getKnowledgeId();
+            if (knowledgeId == null || knowledgeId.isEmpty()) {
+                // 尝试从 otherInfo 中提取
+                knowledgeId = extractKnowledgeIdFromOtherInfo(job.getOtherinfo());
+            }
+            
+            if (knowledgeId == null || knowledgeId.isEmpty()) {
+                log.warn("无法获取 knowledgeId，使用默认值");
+                knowledgeId = "0";
+            }
+
+            // 2. 调用阅读学习接口
+            boolean success = apiClient.completeReadStudy(
+                    job.getJobId(),
+                    knowledgeId,
+                    job.getCourseId(),
+                    job.getClazzId(),
+                    job.getJtoken()
+            );
+
+            if (success) {
+                log.info("✅ 阅读任务学习完成: {}", job.getJobName());
+                return new StudyResultDTO(StudyResult.SUCCESS, "阅读学习完成", job.getJobId());
+            } else {
+                log.error("❌ 阅读任务学习失败: {}", job.getJobName());
+                return new StudyResultDTO(StudyResult.ERROR, "阅读学习失败", job.getJobId());
+            }
+
+        } catch (Exception e) {
+            log.error("学习阅读任务异常: jobId={}", job.getJobId(), e);
+            return new StudyResultDTO(StudyResult.ERROR, "学习失败: " + e.getMessage(), job.getJobId());
+        }
+    }
+
+    @Override
     public StudyResultDTO studyEmptyPage(JobDTO job) {
         log.info("开始学习空页面任务: jobId={}", job.getJobId());
 
@@ -664,8 +704,9 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
         return switch (job.getJobType()) {
             case VIDEO -> studyVideo(job);
             case DOCUMENT -> studyDocument(job);
+            case READ -> studyRead(job);
             case EMPTY_PAGE -> studyEmptyPage(job);
-            case WORK, READ -> {
+            case WORK -> {
                 log.warn("暂不支持的任务类型: {}", job.getJobType());
                 yield new StudyResultDTO(StudyResult.SKIP, "暂不支持的任务类型: " + job.getJobType(), job.getJobId());
             }
