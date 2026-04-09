@@ -194,7 +194,7 @@ public class JobController {
             return ResponseEntity.internalServerError().build();
         }
     }
-}
+
     /**
      * SSE订阅课程学习进度
      *
