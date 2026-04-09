@@ -209,6 +209,7 @@ public class JobAdapter {
             job.setJobId(getStringValue(card, "jobid", String.valueOf(card.has("id") ? card.get("id").asLong() : "")));
             job.setJobName(getStringValue(property, "title", getStringValue(property, "name", "未知直播")));
             job.setJobType(JobType.VIDEO); // 直播暂时归类为视频类型
+            job.setType("live");
             
             // 设置额外参数
             job.setJtoken(getStringValue(card, "jtoken", ""));
@@ -246,6 +247,7 @@ public class JobAdapter {
             job.setJobId(getStringValue(card, "jobid", ""));
             job.setJobName(getStringValue(property, "title", ""));
             job.setJobType(JobType.READ);
+            job.setType("read");
             job.setJtoken(getStringValue(card, "jtoken", ""));
             
             log.debug("解析阅读任务: {}", job.getJobName());
@@ -266,6 +268,9 @@ public class JobAdapter {
      */
     private JobDTO processVideoTask(JsonNode card) {
         try {
+            // 添加原始JSON日志，用于诊断objectId字段问题
+            log.info("视频任务卡片完整JSON: {}", card.toPrettyString());
+            
             JsonNode property = card.get("property");
             if (property == null) {
                 log.warn("视频任务缺少 property 字段");
@@ -282,15 +287,62 @@ public class JobAdapter {
             job.setJobId(getStringValue(card, "jobid", ""));
             job.setJobName(getStringValue(property, "name", ""));
             job.setJobType(JobType.VIDEO);
+            job.setType("video");
             job.setJtoken(getStringValue(card, "jtoken", ""));
             
             // 视频特有参数
-            // 注意：JobDTO 需要扩展字段来存储这些参数
-            // 目前先记录日志，后续可以添加到 DTO 中
+            // 对照Python实现和实际JSON结构，应该使用 objectId 字段（驼峰命名）
+            String objectId = getStringValue(card, "objectId", "");  // 驼峰命名（顶层）
+            if (objectId.isEmpty()) {
+                objectId = getStringValue(card, "objectid", "");  // 全小写（兼容）
+            }
+            String mid = getStringValue(card, "mid", "");
+            
+            log.info("字段对比 - objectId(驼峰): {}, objectid(小写): {}, mid: {}", 
+                    getStringValue(card, "objectId", ""), 
+                    getStringValue(card, "objectid", ""), 
+                    mid);
+            
+            // 如果都没有，才使用 mid
+            if (objectId.isEmpty()) {
+                objectId = mid;
+                log.warn("objectId 和 objectid 都为空，使用 mid 作为 objectId");
+            } else {
+                log.info("使用 objectId: {}", objectId);
+            }
+            job.setObjectId(objectId);
+            
+            job.setOtherinfo(getStringValue(card, "otherInfo", ""));
+            job.setDtoken(getStringValue(card, "dtoken", ""));
+            
             int playTime = getIntValue(card, "playTime", 0);
+            job.setPlayingTime(playTime);
+            
             String rt = getStringValue(property, "rt", "");
+            job.setRt(rt);
+            
             String attDuration = getStringValue(card, "attDuration", "");
+            job.setAttDuration(attDuration);
+            
             String videoFaceCaptureEnc = getStringValue(card, "videoFaceCaptureEnc", "");
+            job.setVideoFaceCaptureEnc(videoFaceCaptureEnc);
+            
+            // 从 otherInfo 中提取 duration
+            String otherInfo = getStringValue(card, "otherInfo", "");
+            if (otherInfo != null && !otherInfo.isEmpty()) {
+                // 尝试解析 duration 参数
+                String[] params = otherInfo.split("&");
+                for (String param : params) {
+                    if (param.startsWith("duration=")) {
+                        try {
+                            job.setDuration(Double.parseDouble(param.substring(9)));
+                        } catch (NumberFormatException e) {
+                            log.debug("解析 duration 失败: {}", param);
+                        }
+                        break;
+                    }
+                }
+            }
             
             log.debug("解析视频任务: {}, 播放时长: {}", job.getJobName(), playTime);
             
@@ -316,7 +368,12 @@ public class JobAdapter {
             job.setJobId(getStringValue(card, "jobid", ""));
             job.setJobName(getStringValue(property, "title", "未知文档"));
             job.setJobType(JobType.DOCUMENT);
+            job.setType("document");
             job.setJtoken(getStringValue(card, "jtoken", ""));
+            
+            // 文档特有参数
+            job.setObjectId(getStringValue(card, "objectid", ""));
+            job.setDtoken(getStringValue(card, "dtoken", ""));
             
             log.debug("解析文档任务: {}", job.getJobName());
             
@@ -340,6 +397,7 @@ public class JobAdapter {
             job.setJobId(getStringValue(card, "jobid", ""));
             job.setJobName("作业任务");
             job.setJobType(JobType.WORK);
+            job.setType("workid");
             job.setJtoken(getStringValue(card, "jtoken", ""));
             
             log.debug("解析作业任务: jobId={}", job.getJobId());

@@ -105,6 +105,9 @@ public class LoginServiceImpl implements LoginService {
 
             // 更新会话
             sessionManager.updateCookie(cookie);
+            
+            // 从 Cookie 中提取并设置 fid 和 uid
+            extractAndSetFidUid(cookie, responseBody);
 
             // 简单判断登录是否成功（实际应该解析 JSON）
             if (responseBody.contains("\"status\":true") || responseBody.contains("\"status\": true")) {
@@ -132,6 +135,9 @@ public class LoginServiceImpl implements LoginService {
         try {
             // 更新会话
             sessionManager.updateCookie(cookie);
+            
+            // 从 Cookie 中提取并设置 fid 和 uid
+            extractAndSetFidUid(cookie, null);
 
             // 验证 Cookie
             if (!chaoxingApiClient.validateCookie(cookie)) {
@@ -186,5 +192,115 @@ public class LoginServiceImpl implements LoginService {
         }
 
         return cookieBuilder.toString();
+    }
+
+    /**
+     * 从 Cookie 和响应中提取并设置 fid 和 uid
+     *
+     * @param cookie Cookie 字符串
+     * @param responseBody 响应体（可选）
+     */
+    private void extractAndSetFidUid(String cookie, String responseBody) {
+        try {
+            log.debug("完整 Cookie 内容: {}", cookie);
+            
+            // 从 Cookie 中提取 UID (可能是 _uid 或 UID)
+            String uid = extractCookieValue(cookie, "_uid");
+            if (uid == null || uid.isEmpty()) {
+                uid = extractCookieValue(cookie, "UID");
+            }
+            
+            if (uid != null && !uid.isEmpty()) {
+                sessionManager.setUid(uid);
+                log.info("从 Cookie 中提取到 UID: {}", uid);
+            } else {
+                log.warn("未能从 Cookie 中提取 UID");
+            }
+
+            // 从 Cookie 中提取 FID (注意：是 "fid" 不是 "_fid")
+            String fid = extractCookieValue(cookie, "fid");
+            if (fid != null && !fid.isEmpty()) {
+                sessionManager.setFid(fid);
+                log.info("从 Cookie 中提取到 FID: {}", fid);
+            } else {
+                log.warn("未能从 Cookie 中提取 FID");
+                
+                // 如果提供了响应体，尝试从响应中获取
+                if (responseBody != null && !responseBody.isEmpty()) {
+                    fid = extractFidFromResponse(responseBody);
+                    if (fid != null && !fid.isEmpty()) {
+                        sessionManager.setFid(fid);
+                        log.info("从响应中提取到 FID: {}", fid);
+                    } else {
+                        log.error("未能从响应中提取 FID，这可能导致视频学习失败");
+                    }
+                } else {
+                    log.error("未提供响应体，无法提取 FID，这可能导致视频学习失败");
+                }
+            }
+            
+            log.debug("最终设置的 fid: {}, uid: {}", sessionManager.getFid(), sessionManager.getUid());
+
+        } catch (Exception e) {
+            log.error("提取 fid/uid 异常", e);
+        }
+    }
+
+    /**
+     * 从 Cookie 字符串中提取指定名称的值
+     *
+     * @param cookie Cookie 字符串
+     * @param name Cookie 名称
+     * @return Cookie 值
+     */
+    private String extractCookieValue(String cookie, String name) {
+        if (cookie == null || cookie.isEmpty() || name == null || name.isEmpty()) {
+            return null;
+        }
+
+        // 查找 name=value 模式
+        String pattern = name + "=([^;]+)";
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+        java.util.regex.Matcher m = p.matcher(cookie);
+
+        if (m.find()) {
+            return m.group(1);
+        }
+
+        return null;
+    }
+
+    /**
+     * 从响应体中提取 FID
+     *
+     * @param responseBody 响应体
+     * @return FID
+     */
+    private String extractFidFromResponse(String responseBody) {
+        if (responseBody == null || responseBody.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // 尝试从 JSON 响应中提取 fid
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode jsonNode = mapper.readTree(responseBody);
+
+            // 尝试多个可能的字段名
+            if (jsonNode.has("fid")) {
+                return jsonNode.get("fid").asText();
+            }
+            if (jsonNode.has("_fid")) {
+                return jsonNode.get("_fid").asText();
+            }
+            if (jsonNode.has("data") && jsonNode.get("data").has("fid")) {
+                return jsonNode.get("data").get("fid").asText();
+            }
+
+        } catch (Exception e) {
+            log.debug("从响应中解析 fid 失败: {}", e.getMessage());
+        }
+
+        return null;
     }
 }

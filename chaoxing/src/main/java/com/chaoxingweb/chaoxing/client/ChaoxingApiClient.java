@@ -237,9 +237,9 @@ public class ChaoxingApiClient {
      * @param cpi CPI
      * @param dtoken 文档token
      * @param params 请求参数
-     * @return 是否成功
+     * @return 响应JSON字符串
      */
-    public boolean reportVideoProgress(String cpi, String dtoken, Map<String, String> params) {
+    public String reportVideoProgress(String cpi, String dtoken, Map<String, String> params) {
         try {
             log.trace("上报视频进度: cpi={}, dtoken={}", cpi, dtoken);
 
@@ -247,7 +247,7 @@ public class ChaoxingApiClient {
             String cookies = sessionManager.getCookie();
             if (cookies == null || cookies.isEmpty()) {
                 log.error("未登录，无法上报进度");
-                return false;
+                return null;
             }
 
             // 构造URL
@@ -266,28 +266,169 @@ public class ChaoxingApiClient {
             headers.set("Cookie", cookies);
             headers.set("Referer", "https://mooc1.chaoxing.com/");
 
-            // 发送POST请求
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(data, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+            // 发送GET请求（注意：超星使用GET请求上报进度）
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            
+            // 构建带参数的URL
+            StringBuilder urlBuilder = new StringBuilder(url);
+            boolean first = true;
+            for (Map.Entry<String, String> entry : params.entrySet()) {
+                urlBuilder.append(first ? "?" : "&");
+                urlBuilder.append(entry.getKey()).append("=").append(entry.getValue());
+                first = false;
+            }
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                    urlBuilder.toString(), HttpMethod.GET, request, String.class);
 
             // 检查响应状态
             if (response.getStatusCode() != HttpStatus.OK) {
                 log.error("上报视频进度失败，状态码：{}", response.getStatusCode());
-                return false;
+                return null;
             }
 
-            // 检查响应内容
             String responseBody = response.getBody();
-            if (responseBody != null && responseBody.contains("error")) {
-                log.warn("上报视频进度返回错误: {}", responseBody);
-                return false;
-            }
-
-            log.trace("视频进度上报成功");
-            return true;
+            log.trace("视频进度上报成功: {}", responseBody);
+            return responseBody;
 
         } catch (Exception e) {
             log.error("上报视频进度异常", e);
+            return null;
+        }
+    }
+
+    /**
+     * 获取视频/音频状态信息
+     *
+     * @param objectId 对象ID
+     * @param fid FID
+     * @param isVideo 是否为视频（true=视频，false=音频）
+     * @return 响应JSON字符串
+     */
+    public String getMediaStatus(String objectId, String fid, boolean isVideo) {
+        try {
+            log.info("开始获取媒体状态: objectId={}, fid={}, isVideo={}", objectId, fid, isVideo);
+
+            // 参数验证
+            if (objectId == null || objectId.isEmpty()) {
+                log.error("objectId 为空，无法获取媒体状态");
+                return null;
+            }
+            
+            if (fid == null || fid.isEmpty()) {
+                log.error("fid 为空，无法获取媒体状态");
+                return null;
+            }
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法获取媒体状态");
+                return null;
+            }
+            
+            log.debug("Cookie 长度: {}", cookies.length());
+
+            // 构造URL（对照Python实现）
+            // Python: f"https://mooc1.chaoxing.com/ananas/status/{job['objectid']}?k={self.get_fid()}&flag=normal"
+            String url = String.format("https://mooc1.chaoxing.com/ananas/status/%s?k=%s&flag=normal",
+                    objectId, fid);
+            log.info("请求 URL: {}", url);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            if (isVideo) {
+                headers.set("Referer", "https://mooc1.chaoxing.com/ananas/modules/video/index.html");
+            } else {
+                headers.set("Referer", "https://mooc1.chaoxing.com/ananas/modules/audio/index.html");
+            }
+            
+            log.debug("请求头 - User-Agent: {}", USER_AGENT);
+            log.debug("请求头 - Referer: {}", headers.getFirst("Referer"));
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("获取媒体状态失败，状态码：{}", response.getStatusCode());
+                log.error("响应内容: {}", response.getBody());
+                return null;
+            }
+
+            String responseBody = response.getBody();
+            if (responseBody == null || responseBody.isEmpty()) {
+                log.error("响应体为空");
+                return null;
+            }
+            
+            log.info("媒体状态获取成功，响应长度: {}", responseBody.length());
+            log.debug("响应内容: {}", responseBody);
+            return responseBody;
+
+        } catch (Exception e) {
+            log.error("获取媒体状态异常: objectId={}, fid={}, isVideo={}", objectId, fid, isVideo, e);
+            log.error("异常类型: {}", e.getClass().getName());
+            log.error("异常消息: {}", e.getMessage());
+            if (e.getCause() != null) {
+                log.error("异常原因: {}", e.getCause().getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * 完成文档学习任务
+     *
+     * @param jobId 任务ID
+     * @param knowledgeId 知识点ID
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param jtoken 任务token
+     * @return 是否成功
+     */
+    public boolean completeDocumentStudy(String jobId, String knowledgeId, String courseId, 
+                                         String clazzId, String jtoken) {
+        try {
+            log.trace("完成文档学习: jobId={}", jobId);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法完成文档学习");
+                return false;
+            }
+
+            // 构造URL
+            long timestamp = System.currentTimeMillis();
+            String url = String.format(
+                    "https://mooc1.chaoxing.com/ananas/job/document?jobid=%s&knowledgeid=%s&courseid=%s&clazzid=%s&jtoken=%s&_dc=%d",
+                    jobId, knowledgeId, courseId, clazzId, jtoken, timestamp);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("Referer", "https://mooc1.chaoxing.com/");
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("完成文档学习失败，状态码：{}", response.getStatusCode());
+                return false;
+            }
+
+            log.trace("文档学习完成");
+            return true;
+
+        } catch (Exception e) {
+            log.error("完成文档学习异常", e);
             return false;
         }
     }

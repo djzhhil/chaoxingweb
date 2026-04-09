@@ -20,6 +20,23 @@ public class JobDTO {
     private String jtoken;
     private String status;
     private int progress;
+    
+    // 视频学习相关字段
+    private String objectId;           // 对象ID，用于视频进度上报
+    private String otherinfo;          // 其他信息字符串，包含rt等参数
+    private String dtoken;             // 文档/视频token
+    private double duration;           // 视频总时长（秒）
+    private double playingTime;        // 当前播放时间（秒）
+    private String rt;                 // 完成率系数（0.9或1）
+    private String videoFaceCaptureEnc; // 视频人脸捕获加密串
+    private String attDuration;        // 附加时长
+    private String attDurationEnc;     // 附加时长加密串
+    
+    // 任务卡片元数据
+    private String type;               // 任务类型标识（"video", "work", "read"等）
+    private boolean isPassed;          // 是否已通过
+    private boolean jobNeedFace;       // 是否需要人脸识别
+    private boolean jobNeedVideo;      // 是否需要视频验证
 
     public JobDTO() {
     }
@@ -108,5 +125,109 @@ public class JobDTO {
 
     public void setProgress(int progress) {
         this.progress = progress;
+    }
+
+    public String getObjectId() {
+        return objectId;
+    }
+
+    public void setObjectId(String objectId) {
+        this.objectId = objectId;
+    }
+
+    public String getOtherinfo() {
+        return otherinfo;
+    }
+
+    public void setOtherinfo(String otherinfo) {
+        this.otherinfo = otherinfo;
+    }
+
+    public String getDtoken() {
+        return dtoken;
+    }
+
+    public void setDtoken(String dtoken) {
+        this.dtoken = dtoken;
+    }
+
+    public double getDuration() {
+        return duration;
+    }
+
+    public void setDuration(double duration) {
+        this.duration = duration;
+    }
+
+    public double getPlayingTime() {
+        return playingTime;
+    }
+
+    public void setPlayingTime(double playingTime) {
+        this.playingTime = playingTime;
+    }
+
+    public String getRt() {
+        return rt;
+    }
+
+    public void setRt(String rt) {
+        this.rt = rt;
+    }
+
+    public String getVideoFaceCaptureEnc() {
+        return videoFaceCaptureEnc;
+    }
+
+    public void setVideoFaceCaptureEnc(String videoFaceCaptureEnc) {
+        this.videoFaceCaptureEnc = videoFaceCaptureEnc;
+    }
+
+    public String getAttDuration() {
+        return attDuration;
+    }
+
+    public void setAttDuration(String attDuration) {
+        this.attDuration = attDuration;
+    }
+
+    public String getAttDurationEnc() {
+        return attDurationEnc;
+    }
+
+    public void setAttDurationEnc(String attDurationEnc) {
+        this.attDurationEnc = attDurationEnc;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public boolean isPassed() {
+        return isPassed;
+    }
+
+    public void setPassed(boolean passed) {
+        isPassed = passed;
+    }
+
+    public boolean isJobNeedFace() {
+        return jobNeedFace;
+    }
+
+    public void setJobNeedFace(boolean jobNeedFace) {
+        this.jobNeedFace = jobNeedFace;
+    }
+
+    public boolean isJobNeedVideo() {
+        return jobNeedVideo;
+    }
+
+    public void setJobNeedVideo(boolean jobNeedVideo) {
+        this.jobNeedVideo = jobNeedVideo;
     }
 }

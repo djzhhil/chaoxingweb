@@ -46,6 +46,20 @@ public interface SessionManager {
     String getUid();
 
     /**
+     * 设置 fid
+     *
+     * @param fid fid
+     */
+    void setFid(String fid);
+
+    /**
+     * 设置 uid
+     *
+     * @param uid uid
+     */
+    void setUid(String uid);
+
+    /**
      * 获取请求头
      *
      * @return 请求头

@@ -3,11 +3,14 @@ package com.chaoxingweb.app.controller;
 import com.chaoxingweb.chaoxing.course.ChaoxingJobService;
 import com.chaoxingweb.chaoxing.dto.JobDTO;
 import com.chaoxingweb.chaoxing.dto.StudyResultDTO;
+import com.chaoxingweb.chaoxing.service.StudyProgressService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,10 +29,12 @@ public class JobController {
     private static final Logger logger = LoggerFactory.getLogger(JobController.class);
 
     private final ChaoxingJobService jobService;
+    private final StudyProgressService progressService;
 
     @Autowired
-    public JobController(ChaoxingJobService jobService) {
+    public JobController(ChaoxingJobService jobService, StudyProgressService progressService) {
         this.jobService = jobService;
+        this.progressService = progressService;
     }
 
     /**
@@ -70,6 +75,8 @@ public class JobController {
     public ResponseEntity<StudyResultDTO> studyJob(@RequestBody JobDTO job) {
         try {
             logger.info("收到学习任务请求: jobId={}, type={}", job.getJobId(), job.getJobType());
+            logger.info("任务详情 - objectId: {}, courseId: {}, clazzId: {}, otherInfo: {}", 
+                    job.getObjectId(), job.getCourseId(), job.getClazzId(), job.getOtherinfo());
             
             StudyResultDTO result = jobService.studyJob(job);
             return ResponseEntity.ok(result);
@@ -145,5 +152,17 @@ public class JobController {
             logger.error("生成enc签名失败", e);
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    /**
+     * SSE订阅学习进度
+     *
+     * @param jobId 任务ID
+     * @return SSE连接
+     */
+    @GetMapping(value = "/progress/{jobId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeProgress(@PathVariable String jobId) {
+        logger.info("客户端订阅学习进度: jobId={}", jobId);
+        return progressService.createConnection(jobId);
     }
 }
