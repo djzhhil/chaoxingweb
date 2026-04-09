@@ -808,8 +808,12 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
 
     @Override
     public List<StudyResultDTO> studyChapterJobs(String courseId, String clazzId, String knowledgeId, String cpi) {
-        log.info("开始学习章节所有任务: courseId={}, clazzId={}, knowledgeId={}", 
-                courseId, clazzId, knowledgeId);
+        log.info("═══════════════════════════════════════");
+        log.info("📚 开始学习章节所有任务");
+        log.info("课程ID: {}", courseId);
+        log.info("班级ID: {}", clazzId);
+        log.info("知识点ID: {}", knowledgeId);
+        log.info("═══════════════════════════════════════");
 
         List<StudyResultDTO> results = new ArrayList<>();
 
@@ -819,39 +823,108 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             
             @SuppressWarnings("unchecked")
             List<JobDTO> jobs = (List<JobDTO>) jobListResult.get("jobList");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> jobInfo = (Map<String, Object>) jobListResult.get("jobInfo");
 
-            if (jobs == null || jobs.isEmpty()) {
-                log.info("该章节没有任务需要学习");
+            // 检查章节是否未开放
+            if (jobInfo != null && Boolean.TRUE.equals(jobInfo.get("notOpen"))) {
+                log.warn("⚠️  该章节未开放，跳过学习");
                 return results;
             }
 
-            log.info("共找到{}个任务，开始逐个学习", jobs.size());
+            if (jobs == null || jobs.isEmpty()) {
+                log.info("✅ 该章节没有任务需要学习");
+                return results;
+            }
+
+            log.info("📋 共找到{}个任务，开始逐个学习", jobs.size());
+            log.info("═══════════════════════════════════════");
+
+            int successCount = 0;
+            int errorCount = 0;
+            int skipCount = 0;
 
             // 逐个学习任务
             for (int i = 0; i < jobs.size(); i++) {
                 JobDTO job = jobs.get(i);
-                log.info("正在学习第{}/{}个任务", i + 1, jobs.size());
+                
+                log.info("───────────────────────────────────");
+                log.info("🔄 [{}/{}] 开始学习任务", i + 1, jobs.size());
+                log.info("   任务ID: {}", job.getJobId());
+                log.info("   任务名称: {}", job.getJobName() != null ? job.getJobName() : "未知");
+                log.info("   任务类型: {}", job.getJobType());
+                log.info("───────────────────────────────────");
 
-                // 学习任务
-                StudyResultDTO result = studyJob(job);
+                StudyResultDTO result = null;
+                
+                // 任务级别重试（最多3次）
+                int maxRetries = 3;
+                for (int retry = 0; retry < maxRetries; retry++) {
+                    try {
+                        result = studyJob(job);
+                        
+                        // 如果成功或跳过，跳出重试循环
+                        if (result.getResult() == StudyResult.SUCCESS || 
+                            result.getResult() == StudyResult.SKIP) {
+                            break;
+                        }
+                        
+                        // 如果是错误且还有重试次数，等待后重试
+                        if (retry < maxRetries - 1) {
+                            log.warn("⚠️  任务学习失败，第{}次重试...", retry + 1);
+                            rateLimiter.limitRateWithRandom(2.0, 5.0); // 重试前等待更长时间
+                        }
+                        
+                    } catch (Exception e) {
+                        log.error("❌ 任务学习异常 (尝试 {}/{}): {}", retry + 1, maxRetries, e.getMessage());
+                        if (retry == maxRetries - 1) {
+                            result = new StudyResultDTO(StudyResult.ERROR, 
+                                    "学习异常: " + e.getMessage(), job.getJobId());
+                        }
+                    }
+                }
+                
+                if (result == null) {
+                    result = new StudyResultDTO(StudyResult.ERROR, "未知错误", job.getJobId());
+                }
+                
                 results.add(result);
 
-                // 速率限制，避免请求过快
-                rateLimiter.limitRateWithRandom(1.0, 3.0);
+                // 统计结果
+                switch (result.getResult()) {
+                    case SUCCESS -> {
+                        successCount++;
+                        log.info("✅ [{}/{}] 任务学习成功: {}", i + 1, jobs.size(), result.getMessage());
+                    }
+                    case ERROR -> {
+                        errorCount++;
+                        log.error("❌ [{}/{}] 任务学习失败: {}", i + 1, jobs.size(), result.getMessage());
+                    }
+                    case SKIP -> {
+                        skipCount++;
+                        log.info("⏭️  [{}/{}] 任务已跳过: {}", i + 1, jobs.size(), result.getMessage());
+                    }
+                }
 
-                // 如果失败，可以选择继续或停止
-                if (result.getResult() == StudyResult.ERROR) {
-                    log.warn("任务学习失败，继续下一个任务");
+                // 速率限制，避免请求过快（最后一个任务不需要等待）
+                if (i < jobs.size() - 1) {
+                    rateLimiter.limitRateWithRandom(1.0, 3.0);
                 }
             }
 
-            log.info("章节任务学习完成，成功: {}, 失败: {}, 跳过: {}",
-                    results.stream().filter(r -> r.getResult() == StudyResult.SUCCESS).count(),
-                    results.stream().filter(r -> r.getResult() == StudyResult.ERROR).count(),
-                    results.stream().filter(r -> r.getResult() == StudyResult.SKIP).count());
+            // 输出章节学习总结
+            log.info("═══════════════════════════════════════");
+            log.info("📊 章节任务学习完成");
+            log.info("总任务数: {}", jobs.size());
+            log.info("✅ 成功: {}", successCount);
+            log.info("❌ 失败: {}", errorCount);
+            log.info("⏭️  跳过: {}", skipCount);
+            log.info("成功率: {:.1f}%", (double) successCount / jobs.size() * 100);
+            log.info("═══════════════════════════════════════");
 
         } catch (Exception e) {
-            log.error("学习章节任务异常", e);
+            log.error("❌ 学习章节任务异常", e);
         }
 
         return results;

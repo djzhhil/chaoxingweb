@@ -37,6 +37,10 @@ public class JobDTO {
     private boolean isPassed;          // 是否已通过
     private boolean jobNeedFace;       // 是否需要人脸识别
     private boolean jobNeedVideo;      // 是否需要视频验证
+    
+    // 测验相关字段
+    private String ktoken;             // 知识点token（用于测验）
+    private String enc;                // 加密参数（用于测验）
 
     public JobDTO() {
     }
@@ -229,5 +233,21 @@ public class JobDTO {
 
     public void setJobNeedVideo(boolean jobNeedVideo) {
         this.jobNeedVideo = jobNeedVideo;
+    }
+
+    public String getKtoken() {
+        return ktoken;
+    }
+
+    public void setKtoken(String ktoken) {
+        this.ktoken = ktoken;
+    }
+
+    public String getEnc() {
+        return enc;
+    }
+
+    public void setEnc(String enc) {
+        this.enc = enc;
     }
 }
