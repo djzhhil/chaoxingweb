@@ -1,5 +1,8 @@
 package com.chaoxingweb.chaoxing.course.impl;
 
+import com.chaoxingweb.auth.entity.User;
+import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.adapter.JobAdapter;
 import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.core.CipherManager;
@@ -16,6 +19,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
@@ -40,6 +45,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final CipherManager cipherManager;
     private final RateLimiter rateLimiter;
     private final StudyProgressService progressService; // 注入进度服务
+    private final LoginService loginService; // 注入登录服务,用于恢复会话
+    private final UserRepository userRepository; // 注入用户仓库,获取超星Cookie
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Random random = new Random();
@@ -125,6 +132,9 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                 job.getObjectId(), job.getCourseId(), job.getClazzId());
 
         try {
+            // 检查并恢复会话状态(如果fid缺失)
+            ensureSessionValid();
+            
             // 检查objectId是否正确（应该是MD5格式，32位十六进制）
             String objectId = job.getObjectId();
             if (objectId != null && objectId.matches("^\\d+$") && objectId.length() > 20) {
@@ -715,6 +725,69 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
         }
 
         return results;
+    }
+
+    /**
+     * 确保会话有效，如果fid缺失则尝试从数据库恢复
+     */
+    private void ensureSessionValid() {
+        String fid = sessionManager.getFid();
+        
+        if (fid != null && !fid.isEmpty()) {
+            log.debug("会话状态正常 - fid: {}", fid);
+            return;
+        }
+        
+        log.warn("检测到FID缺失，尝试从数据库恢复会话");
+        
+        try {
+            // 1. 获取当前登录用户
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.error("用户未登录，无法恢复会话");
+                throw new RuntimeException("用户未登录");
+            }
+            
+            String username = authentication.getName();
+            log.debug("当前登录用户: {}", username);
+            
+            // 2. 从数据库查询用户
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("用户不存在: " + username));
+            
+            // 3. 检查是否绑定了超星账号
+            if (user.getChaoxingCookie() == null || user.getChaoxingCookie().isEmpty()) {
+                log.error("用户未绑定超星账号: {}", username);
+                throw new RuntimeException("请先绑定超星账号");
+            }
+            
+            // 4. 使用Cookie重新登录以恢复fid/uid
+            log.info("使用保存的Cookie重新登录以恢复会话: userId={}", user.getId());
+            LoginService.LoginResult loginResult = loginService.loginWithCookie(user.getChaoxingCookie());
+            
+            if (!loginResult.isSuccess()) {
+                log.error("Cookie登录失败: {}", loginResult.getMessage());
+                throw new RuntimeException("Cookie已失效，请重新绑定超星账号");
+            }
+            
+            // 5. 验证fid/uid是否成功设置
+            String newFid = sessionManager.getFid();
+            String newUid = sessionManager.getUid();
+            
+            if (newFid == null || newFid.isEmpty()) {
+                log.error("会话恢复后FID仍为空");
+                throw new RuntimeException("会话恢复失败");
+            }
+            
+            log.info("✅ 会话恢复成功 - fid: {}, uid: {}", newFid, newUid);
+            
+        } catch (RuntimeException e) {
+            log.error("会话恢复失败: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("会话恢复异常", e);
+            throw new RuntimeException("会话恢复异常: " + e.getMessage());
+        }
     }
 
     @Override
