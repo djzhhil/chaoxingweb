@@ -1,12 +1,10 @@
 package com.chaoxingweb.course.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.repository.UserRepository;
 import com.chaoxingweb.chaoxing.core.SessionManager;
-import com.chaoxingweb.chaoxing.dto.CourseDTO;
-import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
+import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.course.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +13,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 课程服务实现
@@ -33,7 +30,7 @@ public class CourseServiceImpl implements CourseService {
     private final SessionManager sessionManager;
 
     @Override
-    public List<com.chaoxingweb.course.vo.CourseVO> getCourseList() {
+    public List<CourseVO> getCourseList() {
         log.info("开始获取课程列表");
 
         try {
@@ -41,12 +38,7 @@ public class CourseServiceImpl implements CourseService {
             loadUserCookieToSession();
 
             // 2. 调用 ChaoxingFacade 获取课程列表
-            List<CourseVO> chaoxingCourses = chaoxingFacade.getCourseList();
-
-            // 3. 转换为业务 VO
-            List<com.chaoxingweb.course.vo.CourseVO> courses = chaoxingCourses.stream()
-                    .map(this::convertToCourseVO)
-                    .collect(Collectors.toList());
+            List<CourseVO> courses = chaoxingFacade.getCourseList();
 
             log.info("课程列表获取成功，共{}门课程", courses.size());
             return courses;
@@ -58,7 +50,7 @@ public class CourseServiceImpl implements CourseService {
     }
 
     @Override
-    public com.chaoxingweb.course.vo.CourseVO getCourseDetail(String courseId) {
+    public CourseVO getCourseDetail(String courseId) {
         log.info("开始获取课程详情: courseId={}", courseId);
 
         try {
@@ -66,10 +58,7 @@ public class CourseServiceImpl implements CourseService {
             loadUserCookieToSession();
 
             // 2. 调用 ChaoxingFacade 获取课程详情
-            CourseVO chaoxingCourse = chaoxingFacade.getCourseDetail(courseId);
-
-            // 3. 转换为业务 VO
-            com.chaoxingweb.course.vo.CourseVO course = convertToCourseVO(chaoxingCourse);
+            CourseVO course = chaoxingFacade.getCourseDetail(courseId);
 
             log.info("课程详情获取成功: courseId={}", courseId);
             return course;
@@ -138,24 +127,5 @@ public class CourseServiceImpl implements CourseService {
             log.error("加载用户cookie失败", e);
             throw new RuntimeException("加载用户cookie失败: " + e.getMessage());
         }
-    }
-
-    /**
-     * 转换为业务 VO
-     */
-    private com.chaoxingweb.course.vo.CourseVO convertToCourseVO(CourseVO chaoxingCourse) {
-        return com.chaoxingweb.course.vo.CourseVO.builder()
-                .courseId(chaoxingCourse.getCourseId())
-                .clazzId(chaoxingCourse.getClazzId())
-                .cpi(chaoxingCourse.getCpi())
-                .courseName(chaoxingCourse.getCourseName())
-                .teacherName(chaoxingCourse.getTeacherName())
-                .schoolName(chaoxingCourse.getSchoolName())
-                .description(chaoxingCourse.getDescription())
-                .coverUrl(chaoxingCourse.getCoverUrl())
-                .status(chaoxingCourse.getStatus())
-                .synced(true)
-                .syncTime(System.currentTimeMillis())
-                .build();
     }
 }

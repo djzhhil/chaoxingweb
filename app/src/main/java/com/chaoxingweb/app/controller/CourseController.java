@@ -1,7 +1,7 @@
 package com.chaoxingweb.app.controller;
 
+import com.chaoxingweb.chaoxing.vo.CourseVO;
 import com.chaoxingweb.course.service.CourseService;
-import com.chaoxingweb.course.vo.CourseVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

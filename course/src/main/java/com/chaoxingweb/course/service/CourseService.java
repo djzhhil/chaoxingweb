@@ -1,6 +1,6 @@
 package com.chaoxingweb.course.service;
 
-import com.chaoxingweb.course.vo.CourseVO;
+import com.chaoxingweb.chaoxing.vo.CourseVO;
 
 import java.util.List;
 
