@@ -2,6 +2,7 @@ package com.chaoxingweb.course.service.impl;
 
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.chaoxing.vo.ChaoxingLoginResult;
@@ -24,6 +25,7 @@ public class AccountBindingServiceImpl implements AccountBindingService {
 
     private final ChaoxingFacade chaoxingFacade;
     private final UserRepository userRepository;
+    private final CipherManager cipherManager;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -61,7 +63,7 @@ public class AccountBindingServiceImpl implements AccountBindingService {
             throw new RuntimeException("超星登录失败: " + chaoxingResult.getErrorMessage());
         }
 
-        // 6. 保存超星账号信息到数据库
+        // 6. 保存超星账号信息到数据库（Cookie 加密存储）
         if (useCookie) {
             // Cookie 登录时，从登录结果中提取用户名（如果有的话）
             if (chaoxingResult.getChaoxingUsername() != null && !chaoxingResult.getChaoxingUsername().isEmpty()) {
@@ -69,11 +71,17 @@ public class AccountBindingServiceImpl implements AccountBindingService {
             } else {
                 user.setChaoxingUsername("COOKIE_USER_" + user.getId());
             }
-            user.setChaoxingCookie(cookie);
+            // 加密 Cookie 后存储
+            String encryptedCookie = cipherManager.encrypt(cookie);
+            user.setChaoxingCookie(encryptedCookie);
+            log.debug("Cookie 已加密存储");
         } else {
             // 账号密码登录
             user.setChaoxingUsername(username);
-            user.setChaoxingCookie(chaoxingResult.getCookie());
+            // 加密 Cookie 后存储
+            String encryptedCookie = cipherManager.encrypt(chaoxingResult.getCookie());
+            user.setChaoxingCookie(encryptedCookie);
+            log.debug("Cookie 已加密存储");
         }
 
         userRepository.save(user);

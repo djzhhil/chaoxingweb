@@ -2,6 +2,7 @@ package com.chaoxingweb.course.service.impl;
 
 import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
@@ -28,6 +29,7 @@ public class CourseServiceImpl implements CourseService {
     private final ChaoxingFacade chaoxingFacade;
     private final UserRepository userRepository;
     private final SessionManager sessionManager;
+    private final CipherManager cipherManager;
 
     @Override
     public List<CourseVO> getCourseList() {
@@ -117,9 +119,12 @@ public class CourseServiceImpl implements CourseService {
                 throw new RuntimeException("请先绑定超星账号");
             }
 
+            // 解密 Cookie
+            String decryptedCookie = cipherManager.decrypt(user.getChaoxingCookie());
+            
             // 将cookie设置到SessionManager
-            sessionManager.updateCookie(user.getChaoxingCookie());
-            log.info("已从数据库加载超星cookie到SessionManager: userId={}", user.getId());
+            sessionManager.updateCookie(decryptedCookie);
+            log.info("已从数据库加载并解密超星cookie到SessionManager: userId={}", user.getId());
 
         } catch (RuntimeException e) {
             throw e;

@@ -3,6 +3,7 @@ package com.chaoxingweb.chaoxing.facade.impl;
 import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.converter.ChapterConverter;
 import com.chaoxingweb.chaoxing.converter.CourseConverter;
+import com.chaoxingweb.chaoxing.core.CacheManager;
 import com.chaoxingweb.chaoxing.course.ChaoxingChapterService;
 import com.chaoxingweb.chaoxing.course.ChaoxingCourseService;
 import com.chaoxingweb.chaoxing.dto.ChaoxingLoginDTO;
@@ -40,6 +41,11 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
     private final ChaoxingChapterService chaoxingChapterService;
     private final CourseConverter courseConverter;
     private final ChapterConverter chapterConverter;
+    private final CacheManager cacheManager;
+
+    // 缓存过期时间配置（分钟）
+    private static final long COURSE_LIST_CACHE_TTL = 30; // 课程列表缓存30分钟
+    private static final long CHAPTER_LIST_CACHE_TTL = 30; // 章节列表缓存30分钟
 
     @Override
     public ChaoxingLoginResult login(ChaoxingLoginDTO dto) {
@@ -78,13 +84,24 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
         log.info("开始获取课程列表");
 
         try {
-            // 调用课程服务
+            // 尝试从缓存获取
+            String cacheKey = "course:list";
+            List<CourseVO> cachedCourses = cacheManager.get(cacheKey, List.class);
+            if (cachedCourses != null) {
+                log.info("从缓存中获取课程列表，共{}门课程", cachedCourses.size());
+                return cachedCourses;
+            }
+
+            // 缓存未命中，调用课程服务
             List<CourseDTO> courseDTOs = chaoxingCourseService.getCourseList();
 
             // 使用转换器转换为 VO
             List<CourseVO> courseVOs = courseDTOs.stream()
                     .map(courseConverter::toVO)
                     .collect(Collectors.toList());
+
+            // 存入缓存
+            cacheManager.put(cacheKey, courseVOs, COURSE_LIST_CACHE_TTL);
 
             log.info("课程列表获取成功，共{}门课程", courseVOs.size());
             return courseVOs;
@@ -120,13 +137,24 @@ public class ChaoxingFacadeImpl implements ChaoxingFacade {
         log.info("开始获取课程章节列表: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
 
         try {
-            // 调用章节服务
+            // 尝试从缓存获取
+            String cacheKey = String.format("chapter:list:%s:%s:%s", courseId, clazzId, cpi);
+            List<ChapterVO> cachedChapters = cacheManager.get(cacheKey, List.class);
+            if (cachedChapters != null) {
+                log.info("从缓存中获取章节列表，共{}个章节", cachedChapters.size());
+                return cachedChapters;
+            }
+
+            // 缓存未命中，调用章节服务
             List<ChapterDTO> chapterDTOs = chaoxingChapterService.getChapterList(courseId, clazzId, cpi);
 
             // 使用转换器转换为 VO
             List<ChapterVO> chapterVOs = chapterDTOs.stream()
                     .map(chapterConverter::toVO)
                     .collect(Collectors.toList());
+
+            // 存入缓存
+            cacheManager.put(cacheKey, chapterVOs, CHAPTER_LIST_CACHE_TTL);
 
             log.info("章节列表获取成功，共{}个章节", chapterVOs.size());
             return chapterVOs;
