@@ -50,6 +50,14 @@ public interface ChaoxingJobService {
     StudyResultDTO studyRead(JobDTO job);
 
     /**
+     * 学习测验任务（章节测验）
+     *
+     * @param job 任务DTO
+     * @return 学习结果
+     */
+    StudyResultDTO studyWork(JobDTO job);
+
+    /**
      * 学习空页面任务
      *
      * @param job 任务DTO

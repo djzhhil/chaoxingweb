@@ -4,17 +4,19 @@ import com.chaoxingweb.auth.entity.User;
 import com.chaoxingweb.auth.repository.UserRepository;
 import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.adapter.JobAdapter;
+import com.chaoxingweb.chaoxing.adapter.WorkAdapter;
 import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.RateLimiter;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.course.ChaoxingJobService;
-import com.chaoxingweb.chaoxing.dto.JobDTO;
-import com.chaoxingweb.chaoxing.dto.StudyProgress;
-import com.chaoxingweb.chaoxing.dto.StudyResultDTO;
+import com.chaoxingweb.chaoxing.dto.*;
 import com.chaoxingweb.chaoxing.enums.JobType;
 import com.chaoxingweb.chaoxing.enums.StudyResult;
 import com.chaoxingweb.chaoxing.service.StudyProgressService;
+import com.chaoxingweb.chaoxing.tiku.AnswerMatcher;
+import com.chaoxingweb.chaoxing.tiku.TikuService;
+import com.chaoxingweb.chaoxing.tiku.WorkAnswerManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +43,15 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
 
     private final ChaoxingApiClient apiClient;
     private final JobAdapter jobAdapter;
+    private final WorkAdapter workAdapter;
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
     private final RateLimiter rateLimiter;
     private final StudyProgressService progressService; // 注入进度服务
     private final LoginService loginService; // 注入登录服务,用于恢复会话
     private final UserRepository userRepository; // 注入用户仓库,获取超星Cookie
+    private final TikuService tikuService; // 注入题库服务
+    private final AnswerMatcher answerMatcher; // 注入答案匹配器
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static final Random random = new Random();
@@ -693,6 +698,93 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     }
 
     @Override
+    public StudyResultDTO studyWork(JobDTO job) {
+        log.info("📝 开始学习测验任务: jobId={}, jobName={}", job.getJobId(), job.getJobName());
+
+        try {
+            // 1. 检查并恢复会话状态
+            ensureSessionValid();
+
+            // 2. 提取必要参数
+            String knowledgeId = job.getKnowledgeId();
+            if (knowledgeId == null || knowledgeId.isEmpty()) {
+                knowledgeId = extractKnowledgeIdFromOtherInfo(job.getOtherinfo());
+            }
+
+            String cpi = extractCpiFromOtherInfo(job.getOtherinfo());
+            if (cpi == null || cpi.isEmpty()) {
+                cpi = "0";
+            }
+
+            // 3. 获取workId（去掉work-前缀）
+            String workId = job.getJobId().replace("work-", "");
+
+            log.info("测验参数 - workId: {}, knowledgeId: {}, cpi: {}", workId, knowledgeId, cpi);
+
+            // 4. 获取测验题目HTML
+            String html = apiClient.getWorkQuestionsHtml(
+                    workId,
+                    job.getJobId(),
+                    knowledgeId,
+                    job.getKtoken() != null ? job.getKtoken() : "",
+                    cpi,
+                    job.getClazzId(),
+                    job.getCourseId(),
+                    job.getEnc()
+            );
+
+            if (html == null || html.isEmpty()) {
+                log.error("❌ 获取测验题目失败");
+                return new StudyResultDTO(StudyResult.ERROR, "获取测验题目失败", job.getJobId());
+            }
+
+            // 5. 解析题目
+            Map<String, Object> parsedData = workAdapter.decodeQuestionsInfo(html);
+            
+            @SuppressWarnings("unchecked")
+            List<QuestionDTO> questions = (List<QuestionDTO>) parsedData.get("questions");
+            
+            @SuppressWarnings("unchecked")
+            Map<String, String> formData = (Map<String, String>) parsedData.get("formData");
+
+            if (questions == null || questions.isEmpty()) {
+                log.warn("⚠️  未解析到题目，可能测验已完成或无题目");
+                return new StudyResultDTO(StudyResult.SUCCESS, "测验无题目或已完成", job.getJobId());
+            }
+
+            log.info("✅ 成功解析{}道题目", questions.size());
+
+            // 6. 创建答题管理器并处理所有题目
+            WorkAnswerManager answerManager = new WorkAnswerManager(tikuService, answerMatcher);
+            int foundAnswers = answerManager.processAllQuestions(questions);
+
+            // 7. 获取提交策略
+            String pyFlag = answerManager.getPyFlag(foundAnswers, questions.size());
+
+            // 8. 构建提交表单
+            Map<String, String> submitData = answerManager.buildSubmitFormData(questions, formData, pyFlag);
+
+            // 9. 提交答案
+            boolean success = apiClient.submitWorkAnswers(submitData);
+
+            if (success) {
+                String action = "1".equals(pyFlag) ? "保存" : "提交";
+                log.info("✅ 测验任务{}成功: {}/{}道题找到答案", action, foundAnswers, questions.size());
+                return new StudyResultDTO(StudyResult.SUCCESS, 
+                        String.format("测验%s成功 (%d/%d)", action, foundAnswers, questions.size()), 
+                        job.getJobId());
+            } else {
+                log.error("❌ 测验答案提交失败");
+                return new StudyResultDTO(StudyResult.ERROR, "测验答案提交失败", job.getJobId());
+            }
+
+        } catch (Exception e) {
+            log.error("学习测验任务异常: jobId={}", job.getJobId(), e);
+            return new StudyResultDTO(StudyResult.ERROR, "学习失败: " + e.getMessage(), job.getJobId());
+        }
+    }
+
+    @Override
     public StudyResultDTO studyJob(JobDTO job) {
         log.info("开始学习任务: jobId={}, type={}", job.getJobId(), job.getJobType());
 
@@ -705,11 +797,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             case VIDEO -> studyVideo(job);
             case DOCUMENT -> studyDocument(job);
             case READ -> studyRead(job);
+            case WORK -> studyWork(job);
             case EMPTY_PAGE -> studyEmptyPage(job);
-            case WORK -> {
-                log.warn("暂不支持的任务类型: {}", job.getJobType());
-                yield new StudyResultDTO(StudyResult.SKIP, "暂不支持的任务类型: " + job.getJobType(), job.getJobId());
-            }
             default -> {
                 log.warn("未知任务类型: {}", job.getJobType());
                 yield new StudyResultDTO(StudyResult.SKIP, "未知任务类型", job.getJobId());

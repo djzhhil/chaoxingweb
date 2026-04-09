@@ -29,3 +29,4 @@ Thumbs.db
 
 # Spring Boot
 spring-boot-*.log
+/python/
