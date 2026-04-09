@@ -1,12 +1,17 @@
 package com.chaoxingweb.course.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import com.chaoxingweb.auth.entity.User;
+import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import com.chaoxingweb.course.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,16 +29,21 @@ import java.util.stream.Collectors;
 public class CourseServiceImpl implements CourseService {
 
     private final ChaoxingFacade chaoxingFacade;
+    private final UserRepository userRepository;
+    private final SessionManager sessionManager;
 
     @Override
     public List<com.chaoxingweb.course.vo.CourseVO> getCourseList() {
         log.info("开始获取课程列表");
 
         try {
-            // 调用 ChaoxingFacade 获取课程列表
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 调用 ChaoxingFacade 获取课程列表
             List<CourseVO> chaoxingCourses = chaoxingFacade.getCourseList();
 
-            // 转换为业务 VO
+            // 3. 转换为业务 VO
             List<com.chaoxingweb.course.vo.CourseVO> courses = chaoxingCourses.stream()
                     .map(this::convertToCourseVO)
                     .collect(Collectors.toList());
@@ -52,10 +62,13 @@ public class CourseServiceImpl implements CourseService {
         log.info("开始获取课程详情: courseId={}", courseId);
 
         try {
-            // 调用 ChaoxingFacade 获取课程详情
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 调用 ChaoxingFacade 获取课程详情
             CourseVO chaoxingCourse = chaoxingFacade.getCourseDetail(courseId);
 
-            // 转换为业务 VO
+            // 3. 转换为业务 VO
             com.chaoxingweb.course.vo.CourseVO course = convertToCourseVO(chaoxingCourse);
 
             log.info("课程详情获取成功: courseId={}", courseId);
@@ -72,7 +85,10 @@ public class CourseServiceImpl implements CourseService {
         log.info("开始同步课程列表");
 
         try {
-            // 调用 ChaoxingFacade 获取课程列表
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 调用 ChaoxingFacade 获取课程列表
             List<CourseVO> chaoxingCourses = chaoxingFacade.getCourseList();
 
             // 这里应该将课程列表保存到数据库
@@ -84,6 +100,43 @@ public class CourseServiceImpl implements CourseService {
         } catch (Exception e) {
             log.error("同步课程列表失败", e);
             throw new RuntimeException("同步课程列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 从数据库加载用户cookie并设置到SessionManager
+     */
+    private void loadUserCookieToSession() {
+        try {
+            // 获取当前登录用户
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("用户未登录，无法加载cookie");
+                return;
+            }
+
+            String username = authentication.getName();
+            log.debug("当前登录用户: {}", username);
+
+            // 从数据库查询用户
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new RuntimeException("用户不存在: " + username));
+
+            // 检查是否绑定了超星账号
+            if (user.getChaoxingCookie() == null || user.getChaoxingCookie().isEmpty()) {
+                log.warn("用户未绑定超星账号: {}", username);
+                throw new RuntimeException("请先绑定超星账号");
+            }
+
+            // 将cookie设置到SessionManager
+            sessionManager.updateCookie(user.getChaoxingCookie());
+            log.info("已从数据库加载超星cookie到SessionManager: userId={}", user.getId());
+
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("加载用户cookie失败", e);
+            throw new RuntimeException("加载用户cookie失败: " + e.getMessage());
         }
     }
 
