@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习进度监控</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .progress-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .task-info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .task-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .task-status {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .progress-bar-wrapper {
+            position: relative;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 1;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-studying {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .log-container {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 学习进度监控</h1>
+        
+        <div class="input-group">
+            <label for="jobId">任务ID：</label>
+            <input type="text" id="jobId" placeholder="例如：1773758484848442" value="1773758484848442">
+        </div>
+
+        <button id="connectBtn" onclick="connect()">连接进度</button>
+        <button id="disconnectBtn" onclick="disconnect()" style="display: none; margin-top: 10px; background: #dc3545;">断开连接</button>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="task-info">
+                <div class="task-name" id="taskName">--</div>
+                <div class="task-status">
+                    状态：<span class="status-badge status-studying" id="statusBadge">学习中</span>
+                </div>
+            </div>
+
+            <div class="progress-bar-wrapper">
+                <div class="progress-text" id="percentText">0%</div>
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+
+            <div class="time-info">
+                <span id="currentTime">00:00</span>
+                <span id="totalTime">00:00</span>
+            </div>
+
+            <div class="log-container" id="logContainer">
+                <div class="log-entry">等待连接...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+
+        function connect() {
+            const jobId = document.getElementById('jobId').value.trim();
+            if (!jobId) {
+                alert('请输入任务ID');
+                return;
+            }
+
+            // 关闭之前的连接
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            // 创建SSE连接
+            const url = `/api/job/progress/${jobId}`;
+            eventSource = new EventSource(url);
+
+            // 更新UI
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('disconnectBtn').style.display = 'block';
+            document.getElementById('progressContainer').classList.add('active');
+            addLog('已连接到服务器', 'success');
+
+            // 监听进度事件
+            eventSource.addEventListener('progress', (event) => {
+                const progress = JSON.parse(event.data);
+                updateProgress(progress);
+            });
+
+            // 监听错误
+            eventSource.onerror = (error) => {
+                console.error('SSE错误:', error);
+                addLog('连接错误', 'error');
+                disconnect();
+            };
+        }
+
+        function disconnect() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+
+            document.getElementById('connectBtn').style.display = 'block';
+            document.getElementById('disconnectBtn').style.display = 'none';
+            addLog('已断开连接');
+        }
+
+        function updateProgress(progress) {
+            // 更新任务名称
+            document.getElementById('taskName').textContent = progress.jobName || '--';
+
+            // 更新进度条
+            const percent = progress.percent || 0;
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('percentText').textContent = percent + '%';
+
+            // 更新时间
+            document.getElementById('currentTime').textContent = formatTime(progress.currentTime);
+            document.getElementById('totalTime').textContent = formatTime(progress.totalTime);
+
+            // 更新状态
+            const statusBadge = document.getElementById('statusBadge');
+            if (progress.status === 'COMPLETED') {
+                statusBadge.textContent = '已完成';
+                statusBadge.className = 'status-badge status-completed';
+                addLog('✅ 任务完成！', 'success');
+            } else if (progress.status === 'FAILED') {
+                statusBadge.textContent = '失败';
+                statusBadge.className = 'status-badge status-failed';
+                addLog('❌ 任务失败', 'error');
+            } else {
+                statusBadge.textContent = '学习中';
+                statusBadge.className = 'status-badge status-studying';
+            }
+
+            // 添加日志
+            addLog(`进度更新: ${percent}% (${formatTime(progress.currentTime)}/${formatTime(progress.totalTime)})`);
+        }
+
+        function formatTime(seconds) {
+            if (!seconds && seconds !== 0) return '--:--';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function addLog(message, type = '') {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // 页面卸载时关闭连接
+        window.addEventListener('beforeunload', () => {
+            disconnect();
+        });
+    </script>
+</body>
+</html>

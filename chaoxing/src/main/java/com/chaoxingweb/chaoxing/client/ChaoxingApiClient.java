@@ -498,4 +498,181 @@ public class ChaoxingApiClient {
             return false;
         }
     }
+
+    /**
+     * 获取测验题目页面HTML
+     *
+     * @param workId 工作ID（不含work-前缀）
+     * @param jobid 作业ID（含work-前缀）
+     * @param knowledgeId 知识点ID
+     * @param ktoken KToken
+     * @param cpi CPI
+     * @param clazzId 班级ID
+     * @param courseId 课程ID
+     * @param enc 加密参数
+     * @return 测验页面HTML内容
+     */
+    public String getWorkQuestionsHtml(String workId, String jobid, String knowledgeId,
+                                       String ktoken, String cpi, String clazzId,
+                                       String courseId, String enc) {
+        try {
+            log.info("开始获取测验题目: workId={}, jobid={}", workId, jobid);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法获取测验题目");
+                return "";
+            }
+
+            // 构造URL - 参考Python实现
+            String url = "https://mooc1.chaoxing.com/mooc-ans/api/work";
+
+            // 构造请求参数
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("api", "1");
+            params.add("workId", workId);
+            params.add("jobid", jobid);
+            params.add("originJobId", jobid);
+            params.add("needRedirect", "true");
+            params.add("skipHeader", "true");
+            params.add("knowledgeid", knowledgeId);
+            params.add("ktoken", ktoken);
+            params.add("cpi", cpi);
+            params.add("ut", "s");
+            params.add("clazzId", clazzId);
+            params.add("type", "");
+            params.add("enc", enc);
+            params.add("mooc2", "1");
+            params.add("courseid", courseId);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("Referer", "https://mooc1.chaoxing.com/");
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url + "?" + buildQueryString(params),
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("获取测验题目失败，状态码：{}", response.getStatusCode());
+                return "";
+            }
+
+            String html = response.getBody();
+            if (html == null || html.isEmpty()) {
+                log.error("获取测验题目失败，响应为空");
+                return "";
+            }
+
+            log.info("测验题目获取成功，HTML长度: {}", html.length());
+            return html;
+
+        } catch (Exception e) {
+            log.error("获取测验题目异常: workId={}", workId, e);
+            return "";
+        }
+    }
+
+    /**
+     * 提交测验答案
+     *
+     * @param formData 表单数据（包含所有答案字段）
+     * @return 是否提交成功
+     */
+    public boolean submitWorkAnswers(Map<String, String> formData) {
+        try {
+            log.info("开始提交测验答案...");
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法提交测验答案");
+                return false;
+            }
+
+            // 构造URL
+            String url = "https://mooc1.chaoxing.com/mooc-ans/work/addStudentWorkNew";
+
+            // 构造请求体
+            MultiValueMap<String, String> requestBody = new LinkedMultiValueMap<>();
+            formData.forEach(requestBody::add);
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+            headers.set("Referer", "https://mooc1.chaoxing.com/");
+            headers.set("X-Requested-With", "XMLHttpRequest");
+            headers.set("Accept", "application/json, text/javascript, */*; q=0.01");
+
+            // 发送POST请求
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(requestBody, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+
+            // 检查响应状态
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.error("提交测验答案失败，状态码：{}", response.getStatusCode());
+                return false;
+            }
+
+            // 解析响应JSON
+            String responseBody = response.getBody();
+            if (responseBody != null && !responseBody.isEmpty()) {
+                try {
+                    com.fasterxml.jackson.databind.JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    boolean status = jsonNode.has("status") && jsonNode.get("status").asBoolean();
+                    String msg = jsonNode.has("msg") ? jsonNode.get("msg").asText() : "未知";
+
+                    if (status) {
+                        log.info("✅ 提交测验答案成功: {}", msg);
+                        return true;
+                    } else {
+                        log.error("❌ 提交测验答案失败: {}", msg);
+                        return false;
+                    }
+                } catch (Exception e) {
+                    log.error("解析提交响应失败: {}", responseBody, e);
+                    return false;
+                }
+            }
+
+            log.error("提交测验答案失败，响应为空");
+            return false;
+
+        } catch (Exception e) {
+            log.error("提交测验答案异常", e);
+            return false;
+        }
+    }
+
+    /**
+     * 构建查询字符串
+     *
+     * @param params 参数Map
+     * @return 查询字符串
+     */
+    private String buildQueryString(MultiValueMap<String, String> params) {
+        StringBuilder sb = new StringBuilder();
+        boolean first = true;
+        for (Map.Entry<String, List<String>> entry : params.entrySet()) {
+            for (String value : entry.getValue()) {
+                if (!first) {
+                    sb.append("&");
+                }
+                sb.append(entry.getKey()).append("=").append(value);
+                first = false;
+            }
+        }
+        return sb.toString();
+    }
 }
