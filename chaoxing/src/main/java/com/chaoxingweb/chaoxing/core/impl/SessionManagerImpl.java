@@ -1,81 +1,112 @@
 package com.chaoxingweb.chaoxing.core.impl;
 
+import com.chaoxingweb.chaoxing.core.MultiTenantSessionManager;
+import com.chaoxingweb.chaoxing.core.SessionContext;
 import com.chaoxingweb.chaoxing.core.SessionManager;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
- * 会话管理器实现
+ * 会话管理器实现 - 多租户兼容层
+ * 
+ * 从 SecurityContext 获取当前用户，委托给 MultiTenantSessionManager 管理
  *
  * @author 小克 🐕💎
  * @since 2026-03-30
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class SessionManagerImpl implements SessionManager {
 
-    private String sessionId;
-    private String cookie;
-    private String fid;
-    private String uid;
-    private Map<String, String> headers;
+    private final MultiTenantSessionManager multiTenantSessionManager;
 
-    public SessionManagerImpl() {
-        this.sessionId = UUID.randomUUID().toString();
-        this.headers = new HashMap<>();
-        this.headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    /**
+     * 获取当前用户标识
+     *
+     * @return 用户ID或用户名
+     */
+    private String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("用户未登录，使用默认会话");
+            return "anonymous";
+        }
+        
+        String username = authentication.getName();
+        log.debug("当前用户: {}", username);
+        return username;
+    }
+
+    /**
+     * 获取当前用户的会话上下文
+     *
+     * @return 会话上下文
+     */
+    private SessionContext getCurrentSession() {
+        String userId = getCurrentUserId();
+        return multiTenantSessionManager.getOrCreateSession(userId);
     }
 
     @Override
     public String getSessionId() {
-        return sessionId;
+        return getCurrentSession().getSessionId();
     }
 
     @Override
     public String getCookie() {
-        return cookie;
+        return getCurrentSession().getCookie();
     }
 
     @Override
     public void updateCookie(String cookie) {
-        this.cookie = cookie;
+        String userId = getCurrentUserId();
+        multiTenantSessionManager.updateCookie(userId, cookie);
+        log.info("更新用户会话Cookie: userId={}", userId);
     }
 
     @Override
     public String getFid() {
-        return fid;
+        return getCurrentSession().getFid();
     }
 
     @Override
     public String getUid() {
-        return uid;
+        return getCurrentSession().getUid();
+    }
+
+    @Override
+    public void setFid(String fid) {
+        String userId = getCurrentUserId();
+        multiTenantSessionManager.setFid(userId, fid);
+    }
+
+    @Override
+    public void setUid(String uid) {
+        String userId = getCurrentUserId();
+        multiTenantSessionManager.setUid(userId, uid);
     }
 
     @Override
     public Map<String, String> getHeaders() {
-        return headers;
+        return getCurrentSession().getHeaders();
     }
 
     @Override
     public void updateHeaders(Map<String, String> headers) {
-        this.headers.putAll(headers);
-    }
-
-    public void setFid(String fid) {
-        this.fid = fid;
-    }
-
-    public void setUid(String uid) {
-        this.uid = uid;
+        String userId = getCurrentUserId();
+        multiTenantSessionManager.updateHeaders(userId, headers);
     }
 
     @Override
     public void close() {
-        this.cookie = null;
-        this.fid = null;
-        this.uid = null;
-        this.headers.clear();
+        String userId = getCurrentUserId();
+        multiTenantSessionManager.closeSession(userId);
+        log.info("关闭用户会话: userId={}", userId);
     }
 }
