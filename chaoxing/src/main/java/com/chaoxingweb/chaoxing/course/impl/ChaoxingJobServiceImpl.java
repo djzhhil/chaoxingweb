@@ -7,7 +7,7 @@ import com.chaoxingweb.chaoxing.adapter.JobAdapter;
 import com.chaoxingweb.chaoxing.adapter.WorkAdapter;
 import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
 import com.chaoxingweb.chaoxing.core.CipherManager;
-import com.chaoxingweb.chaoxing.core.RateLimiter;
+import com.chaoxingweb.chaoxing.core.MultiTenantRateLimiter;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.course.ChaoxingJobService;
 import com.chaoxingweb.chaoxing.dto.*;
@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,7 +48,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final WorkAdapter workAdapter;
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
-    private final RateLimiter rateLimiter;
+    private final MultiTenantRateLimiter rateLimiter;
     private final StudyProgressService progressService; // 注入进度服务
     private final LoginService loginService; // 注入登录服务,用于恢复会话
     private final UserRepository userRepository; // 注入用户仓库,获取超星Cookie
@@ -56,7 +57,6 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final LiveService liveService; // 注入直播服务
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final Random random = new Random();
     
     // 视频学习配置
     private static final double THRESHOLD = 0.5; // 每次循环的时间间隔（秒）
@@ -72,9 +72,10 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             Map<String, Object> jobInfo = new HashMap<>();
 
             // 尝试不同的任务数量（0-6）
+            String userId = getCurrentUserId();
             for (int num = 0; num <= 6; num++) {
                 // 速率限制
-                rateLimiter.limitRate();
+                rateLimiter.limitRate(userId);
 
                 // 获取任务卡片HTML
                 String html = apiClient.getJobCardsHtml(clazzId, courseId, knowledgeId, cpi, String.valueOf(num));
@@ -258,7 +259,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
         int playTime = initialPlayTime; // 用于上报的整数
         int lastLogTime = 0;
         long lastIterTime = System.currentTimeMillis(); // 在循环外初始化
-        int waitTime = 30 + random.nextInt(61); // 30-90秒随机
+        int waitTime = 30 + ThreadLocalRandom.current().nextInt(61); // 30-90秒随机
         int forbiddenRetry = 0;
         int lastPrintedPercent = -1; // 记录上次输出的进度百分比
 
@@ -306,7 +307,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                         log.warn("出现403报错, 正在尝试刷新会话状态 (第{}次)", forbiddenRetry);
                         
                         try {
-                            Thread.sleep((long)(random.nextDouble() * 2000 + 2000)); // 2-4秒
+                            Thread.sleep(ThreadLocalRandom.current().nextLong(2000, 4001)); // 2-4秒
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
                             return StudyResult.ERROR;
@@ -333,7 +334,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                     }
                 }
                 
-                waitTime = 30 + random.nextInt(61); // 重新设置等待时间
+                waitTime = 30 + ThreadLocalRandom.current().nextInt(61); // 重新设置等待时间
                 lastLogTime = playTime;
             }
 
@@ -410,8 +411,9 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
      */
     private Object[] reportVideoProgress(JobDTO job, String dtoken, int duration, int playingTime) {
         try {
-            // 速率限制
-            rateLimiter.limitRateWithRandom(0.5, 2.0);
+            // 速率限制（使用当前用户ID）
+            String userId = getCurrentUserId();
+            rateLimiter.limitRateWithRandom(userId, 0.5, 2.0);
 
             String clazzId = job.getClazzId();
             String courseId = job.getCourseId();
@@ -530,7 +532,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
      */
     private Map<String, Object> refreshVideoStatus(JobDTO job) {
         try {
-            rateLimiter.limitRateWithRandom(0.1, 0.2);
+            String userId = getCurrentUserId();
+            rateLimiter.limitRateWithRandom(userId, 0.1, 0.2);
             
             String fid = sessionManager.getFid();
             if (fid == null) {
@@ -893,7 +896,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                         // 如果是错误且还有重试次数，等待后重试
                         if (retry < maxRetries - 1) {
                             log.warn("⚠️  任务学习失败，第{}次重试...", retry + 1);
-                            rateLimiter.limitRateWithRandom(2.0, 5.0); // 重试前等待更长时间
+                            String userId = getCurrentUserId();
+                            rateLimiter.limitRateWithRandom(userId, 2.0, 5.0); // 重试前等待更长时间
                         }
                         
                     } catch (Exception e) {
@@ -929,7 +933,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
 
                 // 速率限制，避免请求过快（最后一个任务不需要等待）
                 if (i < jobs.size() - 1) {
-                    rateLimiter.limitRateWithRandom(1.0, 3.0);
+                    String userId = getCurrentUserId();
+                    rateLimiter.limitRateWithRandom(userId, 1.0, 3.0);
                 }
             }
 
@@ -1036,5 +1041,19 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             log.error("生成enc签名失败", e);
             return "";
         }
+    }
+
+    /**
+     * 获取当前用户ID
+     *
+     * @return 用户ID或用户名
+     */
+    private String getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("用户未登录，使用默认限流器");
+            return "anonymous";
+        }
+        return authentication.getName();
     }
 }

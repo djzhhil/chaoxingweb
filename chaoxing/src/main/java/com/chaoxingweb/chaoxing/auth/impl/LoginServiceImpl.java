@@ -2,7 +2,6 @@ package com.chaoxingweb.chaoxing.auth.impl;
 
 import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.client.ChaoxingApiClient;
-import com.chaoxingweb.chaoxing.core.AccountManager;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import jakarta.annotation.PostConstruct;
@@ -34,7 +33,6 @@ public class LoginServiceImpl implements LoginService {
     private static final String LOGIN_URL = "https://passport2.chaoxing.com/fanyalogin";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36";
 
-    private final AccountManager accountManager;
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
     private final ChaoxingApiClient chaoxingApiClient;
