@@ -1,4 +1,4 @@
-package com.chaoxingweb.auth.enums;
+package com.chaoxingweb.persistence.enums;
 
 import lombok.Getter;
 

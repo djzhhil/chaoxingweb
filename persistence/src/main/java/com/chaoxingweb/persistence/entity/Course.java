@@ -1,4 +1,4 @@
-package com.chaoxingweb.auth.entity;
+package com.chaoxingweb.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 章节实体 - 用于持久化章节结构
+ * 课程实体 - 用于持久化课程信息
  *
  * @author 小克 🐕💎
  * @since 2026-04-10
@@ -19,18 +19,18 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "cx_chapter", indexes = {
-        @Index(name = "idx_course_chapter", columnList = "courseId,chapterId"),
-        @Index(name = "idx_user_chapter", columnList = "userId,courseId")
+@Table(name = "cx_course", indexes = {
+        @Index(name = "idx_course_id", columnList = "courseId"),
+        @Index(name = "idx_user_course", columnList = "userId,courseId")
 })
-public class Chapter {
+public class Course {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /**
-     * 用户ID
+     * 用户ID（关联User表）
      */
     @Column(nullable = false)
     private Long userId;
@@ -54,52 +54,59 @@ public class Chapter {
     private String cpi;
 
     /**
-     * 章节ID（知识点ID）
-     */
-    @Column(nullable = false, length = 50)
-    private String chapterId;
-
-    /**
-     * 章节标题
+     * 课程名称
      */
     @Column(nullable = false, length = 200)
-    private String title;
+    private String courseName;
 
     /**
-     * 父章节ID
+     * 教师姓名
      */
-    @Column(length = 50)
-    private String parentId;
+    @Column(length = 100)
+    private String teacherName;
 
     /**
-     * 层级（从1开始）
+     * 学校名称
      */
-    @Builder.Default
-    private Integer level = 1;
+    @Column(length = 100)
+    private String schoolName;
 
     /**
-     * 章节状态（active/locked/completed）
+     * 课程描述
+     */
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    /**
+     * 封面URL
+     */
+    @Column(length = 500)
+    private String coverUrl;
+
+    /**
+     * 课程状态
      */
     @Column(length = 20)
     private String status;
 
     /**
-     * 任务点数量
+     * 学习进度（百分比）
      */
+    @Column(nullable = false)
     @Builder.Default
-    private Integer jobCount = 0;
+    private Integer progress = 0;
 
     /**
-     * 是否已完成
+     * 总任务数
      */
     @Builder.Default
-    private Boolean hasFinished = false;
+    private Integer totalJobs = 0;
 
     /**
-     * 是否需要解锁
+     * 已完成任务数
      */
     @Builder.Default
-    private Boolean needUnlock = false;
+    private Integer completedJobs = 0;
 
     /**
      * 最后同步时间

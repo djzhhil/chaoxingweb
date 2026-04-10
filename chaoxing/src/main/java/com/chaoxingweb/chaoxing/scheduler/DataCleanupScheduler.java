@@ -1,7 +1,7 @@
 package com.chaoxingweb.chaoxing.scheduler;
 
-import com.chaoxingweb.auth.repository.ChapterRepository;
-import com.chaoxingweb.auth.repository.CourseRepository;
+import com.chaoxingweb.persistence.repository.ChapterRepository;
+import com.chaoxingweb.persistence.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

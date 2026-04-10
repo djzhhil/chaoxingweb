@@ -1,7 +1,7 @@
-package com.chaoxingweb.auth.entity;
+package com.chaoxingweb.persistence.entity;
 
-import com.chaoxingweb.auth.enums.UserRole;
-import com.chaoxingweb.auth.enums.UserStatus;
+import com.chaoxingweb.persistence.enums.UserRole;
+import com.chaoxingweb.persistence.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 

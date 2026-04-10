@@ -1,7 +1,7 @@
 package com.chaoxingweb.course.service.impl;
 
-import com.chaoxingweb.auth.entity.User;
-import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.persistence.entity.User;
+import com.chaoxingweb.persistence.repository.UserRepository;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
 import com.chaoxingweb.chaoxing.vo.CourseVO;

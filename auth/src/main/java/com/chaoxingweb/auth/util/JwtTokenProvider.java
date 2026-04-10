@@ -1,6 +1,6 @@
 package com.chaoxingweb.auth.util;
 
-import com.chaoxingweb.auth.entity.User;
+import com.chaoxingweb.persistence.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

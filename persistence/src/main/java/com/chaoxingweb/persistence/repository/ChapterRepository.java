@@ -1,6 +1,6 @@
-package com.chaoxingweb.auth.repository;
+package com.chaoxingweb.persistence.repository;
 
-import com.chaoxingweb.auth.entity.Chapter;
+import com.chaoxingweb.persistence.entity.Chapter;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

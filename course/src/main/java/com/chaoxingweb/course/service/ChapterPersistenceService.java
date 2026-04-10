@@ -1,7 +1,7 @@
 package com.chaoxingweb.course.service;
 
-import com.chaoxingweb.auth.entity.Chapter;
-import com.chaoxingweb.auth.repository.ChapterRepository;
+import com.chaoxingweb.persistence.entity.Chapter;
+import com.chaoxingweb.persistence.repository.ChapterRepository;
 import com.chaoxingweb.chaoxing.dto.ChapterDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

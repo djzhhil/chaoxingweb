@@ -1,7 +1,7 @@
 package com.chaoxingweb.chaoxing.course.impl;
 
-import com.chaoxingweb.auth.entity.User;
-import com.chaoxingweb.auth.repository.UserRepository;
+import com.chaoxingweb.persistence.entity.User;
+import com.chaoxingweb.persistence.repository.UserRepository;
 import com.chaoxingweb.auth.service.LoginService;
 import com.chaoxingweb.chaoxing.adapter.JobAdapter;
 import com.chaoxingweb.chaoxing.adapter.WorkAdapter;

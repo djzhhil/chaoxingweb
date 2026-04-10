@@ -1,7 +1,7 @@
 package com.chaoxingweb.course.service;
 
-import com.chaoxingweb.auth.entity.LearningRecord;
-import com.chaoxingweb.auth.repository.LearningRecordRepository;
+import com.chaoxingweb.persistence.entity.LearningRecord;
+import com.chaoxingweb.persistence.repository.LearningRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;

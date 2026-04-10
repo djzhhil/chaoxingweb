@@ -1,7 +1,7 @@
 package com.chaoxingweb.auth.vo;
 
-import com.chaoxingweb.auth.enums.UserRole;
-import com.chaoxingweb.auth.enums.UserStatus;
+import com.chaoxingweb.persistence.enums.UserRole;
+import com.chaoxingweb.persistence.enums.UserStatus;
 import lombok.Data;
 
 import java.time.LocalDateTime;

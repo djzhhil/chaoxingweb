@@ -1,4 +1,4 @@
-package com.chaoxingweb.auth.entity;
+package com.chaoxingweb.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

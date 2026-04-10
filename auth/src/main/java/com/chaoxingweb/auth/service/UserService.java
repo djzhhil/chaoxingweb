@@ -4,7 +4,7 @@ import com.chaoxingweb.auth.dto.ChangePasswordDTO;
 import com.chaoxingweb.auth.dto.UserLoginDTO;
 import com.chaoxingweb.auth.dto.UserRegisterDTO;
 import com.chaoxingweb.auth.dto.UserUpdateDTO;
-import com.chaoxingweb.auth.entity.User;
+import com.chaoxingweb.persistence.entity.User;
 import com.chaoxingweb.auth.vo.LoginResult;
 import com.chaoxingweb.auth.vo.UserVO;
 
