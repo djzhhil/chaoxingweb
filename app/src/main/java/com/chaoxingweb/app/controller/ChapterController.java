@@ -1,7 +1,7 @@
 package com.chaoxingweb.app.controller;
 
-import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
 import com.chaoxingweb.chaoxing.vo.ChapterVO;
+import com.chaoxingweb.course.service.CourseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,11 +23,11 @@ public class ChapterController {
 
     private static final Logger logger = LoggerFactory.getLogger(ChapterController.class);
 
-    private final ChaoxingFacade chaoxingFacade;
+    private final CourseService courseService;
 
     @Autowired
-    public ChapterController(ChaoxingFacade chaoxingFacade) {
-        this.chaoxingFacade = chaoxingFacade;
+    public ChapterController(CourseService courseService) {
+        this.courseService = courseService;
     }
 
     /**
@@ -45,7 +45,7 @@ public class ChapterController {
             @RequestParam String cpi) {
         try {
             logger.info("收到获取章节列表请求: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
-            List<ChapterVO> chapterList = chaoxingFacade.getChapterList(courseId, clazzId, cpi);
+            List<ChapterVO> chapterList = courseService.getChapterList(courseId, clazzId, cpi);
             return ResponseEntity.ok(chapterList);
         } catch (Exception e) {
             logger.error("获取章节列表失败", e);
@@ -68,7 +68,7 @@ public class ChapterController {
             @RequestParam String cpi) {
         try {
             logger.info("收到获取章节详情请求: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
-            Map<String, Object> chapterDetail = chaoxingFacade.getChapterDetail(courseId, clazzId, cpi);
+            Map<String, Object> chapterDetail = courseService.getChapterDetail(courseId, clazzId, cpi);
             return ResponseEntity.ok(chapterDetail);
         } catch (Exception e) {
             logger.error("获取章节详情失败", e);

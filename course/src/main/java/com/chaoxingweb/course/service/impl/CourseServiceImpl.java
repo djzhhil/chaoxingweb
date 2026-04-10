@@ -8,6 +8,7 @@ import com.chaoxingweb.persistence.repository.CourseRepository;
 import com.chaoxingweb.persistence.repository.UserRepository;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
+import com.chaoxingweb.chaoxing.course.ChaoxingChapterService;
 import com.chaoxingweb.chaoxing.dto.ChapterDTO;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +39,7 @@ import java.util.stream.Collectors;
 public class CourseServiceImpl implements CourseService {
 
     private final ChaoxingFacade chaoxingFacade;
+    private final ChaoxingChapterService chaoxingChapterService;
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final ChapterRepository chapterRepository;
@@ -397,5 +400,76 @@ public class CourseServiceImpl implements CourseService {
                     return vo;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ChapterVO> getChapterList(String courseId, String clazzId, String cpi) {
+        log.info("开始获取章节列表: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+        try {
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 尝试从数据库读取章节列表
+            Long userId = getCurrentUserId();
+            if (userId != null) {
+                List<Chapter> dbChapters = chapterRepository.findByUserIdAndCourseIdOrderByLevelAscCreateTimeAsc(userId, courseId);
+
+                // 检查是否需要重新同步（超过7天未同步）
+                boolean needSync = dbChapters.isEmpty() ||
+                        dbChapters.stream().anyMatch(c ->
+                                c.getSyncTime() == null ||
+                                        c.getSyncTime().isBefore(LocalDateTime.now().minusHours(CHAPTER_SYNC_INTERVAL_HOURS))
+                        );
+
+                if (!needSync && !dbChapters.isEmpty()) {
+                    log.info("从数据库获取章节列表，共{}个章节", dbChapters.size());
+                    return convertChaptersToVO(dbChapters);
+                }
+
+                log.info("数据库章节需要同步或为空，将从 API 获取");
+            }
+
+            // 3. 调用 ChaoxingFacade 获取章节列表
+            List<ChapterVO> chapters = chaoxingFacade.getChapterList(courseId, clazzId, cpi);
+            
+            // 4. 从底层服务获取DTO以便同步到数据库
+            try {
+                List<ChapterDTO> chapterDTOs = chaoxingChapterService.getChapterList(courseId, clazzId, cpi);
+                if (chapterDTOs != null && !chapterDTOs.isEmpty()) {
+                    // 同步到数据库
+                    syncChaptersToDatabase(courseId, clazzId, cpi, chapterDTOs);
+                }
+            } catch (Exception e) {
+                log.warn("章节同步到数据库失败，但不影响返回结果: {}", e.getMessage());
+            }
+            
+            log.info("章节列表获取成功，共{}个章节", chapters.size());
+            return chapters;
+
+        } catch (Exception e) {
+            log.error("获取章节列表失败", e);
+            throw new RuntimeException("获取章节列表失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Map<String, Object> getChapterDetail(String courseId, String clazzId, String cpi) {
+        log.info("开始获取章节详情: courseId={}, clazzId={}, cpi={}", courseId, clazzId, cpi);
+
+        try {
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 调用 ChaoxingFacade 获取章节详情
+            Map<String, Object> detail = chaoxingFacade.getChapterDetail(courseId, clazzId, cpi);
+
+            log.info("章节详情获取成功");
+            return detail;
+
+        } catch (Exception e) {
+            log.error("获取章节详情失败", e);
+            throw new RuntimeException("获取章节详情失败: " + e.getMessage());
+        }
     }
 }

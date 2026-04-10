@@ -57,6 +57,7 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final LiveService liveService; // 注入直播服务
     private final com.chaoxingweb.chaoxing.service.CourseLearningService courseLearningService; // 注入课程学习服务
     private final com.chaoxingweb.chaoxing.course.ChaoxingChapterService chaoxingChapterService; // 注入章节服务
+    private final com.chaoxingweb.chaoxing.service.LearningRecordService learningRecordService; // 注入学习记录服务
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -142,6 +143,23 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                 job.getObjectId(), job.getCourseId(), job.getClazzId());
 
         try {
+            // 0. 获取或创建学习记录（用于断点续学）
+            String chapterId = extractKnowledgeIdFromOtherInfo(job.getOtherinfo());
+            learningRecordService.getOrCreateRecord(
+                    job.getCourseId(),
+                    chapterId,
+                    job.getJobId(),
+                    "VIDEO",
+                    job.getJobName(),
+                    job.getObjectId()
+            );
+            
+            // 从数据库读取上次播放进度（断点续学）
+            int lastPlayTime = learningRecordService.getLastPlayTime(job.getCourseId(), job.getJobId());
+            if (lastPlayTime > 0) {
+                log.info("检测到断点续学: 上次播放到{}s", lastPlayTime);
+            }
+
             // 检查并恢复会话状态(如果fid缺失)
             ensureSessionValid();
             
@@ -232,10 +250,14 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             StudyResult result = simulateVideoPlayback(job, dtoken, duration, playTime);
             
             if (result == StudyResult.SUCCESS) {
+                // 标记任务完成
+                learningRecordService.markAsCompleted(job.getCourseId(), job.getJobId());
                 return new StudyResultDTO(StudyResult.SUCCESS, "视频学习完成", job.getJobId());
             } else if (result == StudyResult.SKIP) {
                 return new StudyResultDTO(StudyResult.SKIP, "视频学习被跳过", job.getJobId());
             } else {
+                // 标记任务失败
+                learningRecordService.markAsFailed(job.getCourseId(), job.getJobId(), "视频学习失败");
                 return new StudyResultDTO(StudyResult.ERROR, "视频学习失败", job.getJobId());
             }
 
@@ -243,6 +265,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             log.error("学习视频任务异常: jobId={}", job.getJobId(), e);
             log.error("异常类型: {}", e.getClass().getName());
             log.error("异常消息: {}", e.getMessage());
+            // 标记任务失败
+            learningRecordService.markAsFailed(job.getCourseId(), job.getJobId(), e.getMessage());
             return new StudyResultDTO(StudyResult.ERROR, "学习失败: " + e.getMessage(), job.getJobId());
         }
     }
@@ -369,6 +393,17 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                         .timestamp(System.currentTimeMillis())
                         .build();
                 progressService.pushProgress(job.getJobId(), progress);
+                
+                // 每10%保存一次进度到数据库
+                if (percentComplete % 10 == 0) {
+                    learningRecordService.updateProgress(
+                            job.getCourseId(),
+                            job.getJobId(),
+                            "studying",
+                            percentComplete,
+                            playTime
+                    );
+                }
             }
             
             // 速率限制
