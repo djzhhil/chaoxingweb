@@ -24,6 +24,12 @@
             <artifactId>common</artifactId>
         </dependency>
 
+        <!-- Persistence Module -->
+        <dependency>
+            <groupId>com.chaoxingweb</groupId>
+            <artifactId>persistence</artifactId>
+        </dependency>
+
         <!-- Chaoxing Module -->
         <dependency>
             <groupId>com.chaoxingweb</groupId>
