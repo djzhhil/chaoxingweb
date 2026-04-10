@@ -15,6 +15,9 @@ public class CourseDTO {
     private String teacherName;
     private String schoolName;
     private String courseStatus;
+    private String description;
+    private String coverUrl;
+    private String status;
 
     public CourseDTO() {
     }
@@ -80,5 +83,29 @@ public class CourseDTO {
 
     public void setCourseStatus(String courseStatus) {
         this.courseStatus = courseStatus;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getCoverUrl() {
+        return coverUrl;
+    }
+
+    public void setCoverUrl(String coverUrl) {
+        this.coverUrl = coverUrl;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
