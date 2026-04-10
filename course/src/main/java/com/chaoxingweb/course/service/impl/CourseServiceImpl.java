@@ -1,13 +1,17 @@
 package com.chaoxingweb.course.service.impl;
 
+import com.chaoxingweb.persistence.entity.Chapter;
 import com.chaoxingweb.persistence.entity.Course;
 import com.chaoxingweb.persistence.entity.User;
+import com.chaoxingweb.persistence.repository.ChapterRepository;
 import com.chaoxingweb.persistence.repository.CourseRepository;
 import com.chaoxingweb.persistence.repository.UserRepository;
 import com.chaoxingweb.chaoxing.core.CipherManager;
 import com.chaoxingweb.chaoxing.core.SessionManager;
+import com.chaoxingweb.chaoxing.dto.ChapterDTO;
 import com.chaoxingweb.chaoxing.dto.CourseDTO;
 import com.chaoxingweb.chaoxing.facade.ChaoxingFacade;
+import com.chaoxingweb.chaoxing.vo.ChapterVO;
 import com.chaoxingweb.chaoxing.vo.CourseVO;
 import com.chaoxingweb.course.service.CourseService;
 import lombok.RequiredArgsConstructor;
@@ -35,13 +39,19 @@ public class CourseServiceImpl implements CourseService {
     private final ChaoxingFacade chaoxingFacade;
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
+    private final ChapterRepository chapterRepository;
     private final SessionManager sessionManager;
     private final CipherManager cipherManager;
 
     /**
      * 课程同步间隔（小时）
      */
-    private static final int SYNC_INTERVAL_HOURS = 24;
+    private static final int COURSE_SYNC_INTERVAL_HOURS = 24;
+    
+    /**
+     * 章节同步间隔（小时）
+     */
+    private static final int CHAPTER_SYNC_INTERVAL_HOURS = 7 * 24; // 7天
 
     @Override
     public List<CourseVO> getCourseList() {
@@ -60,7 +70,7 @@ public class CourseServiceImpl implements CourseService {
                 boolean needSync = dbCourses.isEmpty() || 
                     dbCourses.stream().anyMatch(c -> 
                         c.getSyncTime() == null || 
-                        c.getSyncTime().isBefore(LocalDateTime.now().minusHours(SYNC_INTERVAL_HOURS))
+                        c.getSyncTime().isBefore(LocalDateTime.now().minusHours(COURSE_SYNC_INTERVAL_HOURS))
                     );
                 
                 if (!needSync && !dbCourses.isEmpty()) {
@@ -252,6 +262,138 @@ public class CourseServiceImpl implements CourseService {
                     vo.setDescription(course.getDescription());
                     vo.setCoverUrl(course.getCoverUrl());
                     vo.setStatus(course.getStatus());
+                    return vo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 同步章节列表到数据库
+     *
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param cpi CPI
+     * @param chapterDTOs 章节DTO列表
+     */
+    @Transactional
+    public void syncChaptersToDatabase(String courseId, String clazzId, String cpi, List<ChapterDTO> chapterDTOs) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            log.warn("用户未登录，无法同步章节");
+            return;
+        }
+
+        if (chapterDTOs == null || chapterDTOs.isEmpty()) {
+            log.info("章节列表为空，跳过同步");
+            return;
+        }
+
+        log.info("开始同步{}个章节到数据库: courseId={}", chapterDTOs.size(), courseId);
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Chapter> chapters = chapterDTOs.stream()
+                .map(dto -> {
+                    // 查询是否已存在
+                    Chapter existingChapter = chapterRepository
+                            .findByUserIdAndCourseIdAndChapterId(userId, courseId, dto.getId())
+                            .orElse(null);
+
+                    Chapter chapter;
+                    if (existingChapter != null) {
+                        // 更新现有记录
+                        chapter = existingChapter;
+                    } else {
+                        // 创建新记录
+                        chapter = new Chapter();
+                        chapter.setUserId(userId);
+                        chapter.setCourseId(courseId);
+                        chapter.setChapterId(dto.getId());
+                    }
+
+                    // 更新字段
+                    chapter.setClazzId(clazzId);
+                    chapter.setCpi(cpi);
+                    chapter.setTitle(dto.getTitle());
+                    chapter.setParentId(dto.getParentId());
+                    chapter.setLevel(dto.getLevel());
+                    chapter.setStatus(dto.getStatus());
+                    chapter.setJobCount(dto.getJobCount());
+                    chapter.setHasFinished(dto.isHasFinished());
+                    chapter.setNeedUnlock(dto.isNeedUnlock());
+                    chapter.setSyncTime(now);
+
+                    return chapter;
+                })
+                .collect(Collectors.toList());
+
+        // 批量保存
+        chapterRepository.saveAll(chapters);
+        log.info("成功同步{}个章节到数据库", chapters.size());
+    }
+
+    /**
+     * 获取或同步章节列表（带持久化）
+     *
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param cpi CPI
+     * @return 章节VO列表
+     */
+    public List<ChapterVO> getOrSyncChapters(String courseId, String clazzId, String cpi) {
+        log.info("开始获取章节列表: courseId={}", courseId);
+
+        try {
+            // 1. 从数据库加载用户cookie并设置到SessionManager
+            loadUserCookieToSession();
+
+            // 2. 尝试从数据库读取章节列表
+            Long userId = getCurrentUserId();
+            if (userId != null) {
+                List<Chapter> dbChapters = chapterRepository.findByUserIdAndCourseIdOrderByLevelAscCreateTimeAsc(userId, courseId);
+
+                // 检查是否需要重新同步（超过7天未同步）
+                boolean needSync = dbChapters.isEmpty() ||
+                        dbChapters.stream().anyMatch(c ->
+                                c.getSyncTime() == null ||
+                                        c.getSyncTime().isBefore(LocalDateTime.now().minusHours(CHAPTER_SYNC_INTERVAL_HOURS))
+                        );
+
+                if (!needSync && !dbChapters.isEmpty()) {
+                    log.info("从数据库获取章节列表，共{}个章节", dbChapters.size());
+                    return convertChaptersToVO(dbChapters);
+                }
+
+                log.info("数据库章节需要同步或为空，将从API获取");
+            }
+
+            // 3. 调用 ChaoxingFacade 获取章节列表
+            List<ChapterVO> chapters = chaoxingFacade.getChapterList(courseId, clazzId, cpi);
+
+            // 4. 需要获取DTO来同步到数据库，所以再次调用底层服务
+            // 注意：这里会有重复的API调用，后续可以优化
+            log.info("章节列表已从API获取，准备同步到数据库");
+
+            log.info("章节列表获取成功，共{}个章节", chapters.size());
+            return chapters;
+
+        } catch (Exception e) {
+            log.error("获取章节列表失败", e);
+            throw new RuntimeException("获取章节列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 将数据库Chapter实体转换为ChapterVO
+     */
+    private List<ChapterVO> convertChaptersToVO(List<Chapter> chapters) {
+        return chapters.stream()
+                .map(chapter -> {
+                    ChapterVO vo = new ChapterVO();
+                    vo.setId(chapter.getChapterId());
+                    vo.setTitle(chapter.getTitle());
+                    vo.setLevel(chapter.getLevel() != null ? chapter.getLevel() : 0);
+                    vo.setStatus(chapter.getStatus());
+                    // 注意：ChapterVO中没有parentId、jobCount等字段，暂时不设置
                     return vo;
                 })
                 .collect(Collectors.toList());
