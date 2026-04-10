@@ -25,6 +25,7 @@
         <module>persistence</module>
         <module>auth</module>
         <module>chaoxing</module>
+        <module>learning</module>
         <module>course</module>
         <module>app</module>
     </modules>
@@ -63,6 +64,11 @@
             <dependency>
                 <groupId>com.chaoxingweb</groupId>
                 <artifactId>chaoxing</artifactId>
+                <version>1.0.0</version>
+            </dependency>
+            <dependency>
+                <groupId>com.chaoxingweb</groupId>
+                <artifactId>learning</artifactId>
                 <version>1.0.0</version>
             </dependency>
             <dependency>
