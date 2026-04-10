@@ -206,4 +206,34 @@ public class JobController {
         logger.info("客户端订阅课程学习进度: courseId={}", courseId);
         return progressService.createCourseConnection(courseId);
     }
+
+    /**
+     * 多线程学习整个课程（所有章节）
+     *
+     * @param courseId 课程ID
+     * @param courseName 课程名称
+     * @param clazzId 班级ID
+     * @param cpi CPI
+     * @param maxConcurrency 最大并发数（可选，默认3）
+     * @return 学习进度汇总
+     */
+    @PostMapping("/study/course")
+    public ResponseEntity<LearningProgressDTO> studyCourse(
+            @RequestParam String courseId,
+            @RequestParam String courseName,
+            @RequestParam String clazzId,
+            @RequestParam String cpi,
+            @RequestParam(defaultValue = "3") int maxConcurrency) {
+        try {
+            logger.info("收到学习整个课程请求: courseId={}, courseName={}, maxConcurrency={}", 
+                    courseId, courseName, maxConcurrency);
+            
+            LearningProgressDTO progress = jobService.studyCourse(courseId, courseName, clazzId, cpi, maxConcurrency);
+            return ResponseEntity.ok(progress);
+            
+        } catch (Exception e) {
+            logger.error("学习课程失败", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 }

@@ -104,4 +104,22 @@ public interface ChaoxingJobService {
      * @return MD5加密签名
      */
     String generateEnc(String clazzId, String jobId, String objectId, int playingTime, int duration, String uid);
+
+    /**
+     * 学习整个课程（所有章节，支持并发）
+     *
+     * @param courseId 课程ID
+     * @param courseName 课程名称
+     * @param clazzId 班级ID
+     * @param cpi CPI
+     * @param maxConcurrency 最大并发数（默认3）
+     * @return 学习进度汇总
+     */
+    com.chaoxingweb.chaoxing.dto.LearningProgressDTO studyCourse(
+            String courseId, 
+            String courseName,
+            String clazzId, 
+            String cpi,
+            int maxConcurrency
+    );
 }

@@ -55,6 +55,8 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     private final TikuService tikuService; // 注入题库服务
     private final AnswerMatcher answerMatcher; // 注入答案匹配器
     private final LiveService liveService; // 注入直播服务
+    private final com.chaoxingweb.chaoxing.service.CourseLearningService courseLearningService; // 注入课程学习服务
+    private final com.chaoxingweb.chaoxing.course.ChaoxingChapterService chaoxingChapterService; // 注入章节服务
     
     private static final ObjectMapper objectMapper = new ObjectMapper();
     
@@ -1055,5 +1057,89 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             return "anonymous";
         }
         return authentication.getName();
+    }
+
+    @Override
+    public LearningProgressDTO studyCourse(String courseId, String courseName, String clazzId, String cpi, int maxConcurrency) {
+        log.info("═══════════════════════════════════════");
+        log.info("🚀 开始多线程学习课程: {} ({})", courseName, courseId);
+        log.info("最大并发数: {}", maxConcurrency);
+        log.info("═══════════════════════════════════════");
+
+        // 委托给 CourseLearningService 处理
+        return courseLearningService.studyCourse(courseId, courseName, new com.chaoxingweb.chaoxing.service.CourseLearningService.ChapterJobsProvider() {
+            @Override
+            public List<Map<String, Object>> getChapters() {
+                // 获取所有章节列表
+                try {
+                    Map<String, Object> chapterDetail = chaoxingChapterService.getChapterDetail(courseId, clazzId, cpi);
+                    
+                    @SuppressWarnings("unchecked")
+                    List<ChapterDTO> chapters = (List<ChapterDTO>) chapterDetail.get("points");
+                    
+                    if (chapters == null || chapters.isEmpty()) {
+                        log.warn("课程没有章节");
+                        return new ArrayList<>();
+                    }
+                    
+                    // 转换为 ChapterScheduler 需要的格式
+                    List<Map<String, Object>> chapterList = new ArrayList<>();
+                    for (int i = 0; i < chapters.size(); i++) {
+                        ChapterDTO chapter = chapters.get(i);
+                        Map<String, Object> chapterMap = new HashMap<>();
+                        chapterMap.put("chapterId", chapter.getId());
+                        chapterMap.put("chapterName", chapter.getTitle() != null ? chapter.getTitle() : "章节" + (i + 1));
+                        chapterList.add(chapterMap);
+                    }
+                    
+                    log.info("获取到{}个章节", chapterList.size());
+                    return chapterList;
+                    
+                } catch (Exception e) {
+                    log.error("获取章节列表失败", e);
+                    return new ArrayList<>();
+                }
+            }
+
+            @Override
+            public void studyChapter(int chapterIndex) {
+                // 学习单个章节
+                try {
+                    // 获取章节详情以获取 knowledgeId
+                    Map<String, Object> chapterDetail = chaoxingChapterService.getChapterDetail(courseId, clazzId, cpi);
+                    
+                    @SuppressWarnings("unchecked")
+                    List<ChapterDTO> chapters = (List<ChapterDTO>) chapterDetail.get("points");
+                    
+                    if (chapters == null || chapterIndex >= chapters.size()) {
+                        throw new RuntimeException("章节索引超出范围: " + chapterIndex);
+                    }
+                    
+                    ChapterDTO chapter = chapters.get(chapterIndex);
+                    String knowledgeId = chapter.getId();
+                    String chapterName = chapter.getTitle() != null ? chapter.getTitle() : "章节" + (chapterIndex + 1);
+                    
+                    log.info("📖 开始学习章节: {} [{}]", chapterName, knowledgeId);
+                    
+                    // 调用现有的章节任务学习方法
+                    List<StudyResultDTO> results = studyChapterJobs(courseId, clazzId, knowledgeId, cpi);
+                    
+                    // 检查是否有失败的任务
+                    long failedCount = results.stream()
+                            .filter(r -> r.getResult() == StudyResult.ERROR)
+                            .count();
+                    
+                    if (failedCount > 0) {
+                        log.warn("⚠️  章节学习完成，但有{}个任务失败", failedCount);
+                    } else {
+                        log.info("✅ 章节学习成功: {}", chapterName);
+                    }
+                    
+                } catch (Exception e) {
+                    log.error("❌ 章节学习失败: index={}", chapterIndex, e);
+                    throw new RuntimeException("章节学习失败: " + e.getMessage(), e);
+                }
+            }
+        });
     }
 }
