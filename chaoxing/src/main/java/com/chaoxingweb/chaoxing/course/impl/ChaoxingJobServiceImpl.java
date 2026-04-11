@@ -139,6 +139,11 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                 }
             }
 
+            // 【关键修复】为每个任务附加数据库中的学习记录状态
+            for (JobDTO job : allJobs) {
+                attachLearningRecordStatus(job);
+            }
+
             log.info("任务列表获取成功，共{}个任务", allJobs.size());
             return Map.of("jobList", allJobs, "jobInfo", jobInfo);
 
@@ -612,6 +617,38 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
     }
 
     /**
+     * 为任务附加数据库中的学习记录状态
+     *
+     * @param job 任务 DTO
+     */
+    private void attachLearningRecordStatus(JobDTO job) {
+        try {
+            // 从数据库查询学习记录
+            String chapterId = extractKnowledgeIdFromOtherInfo(job.getOtherinfo());
+            if (chapterId == null || chapterId.isEmpty()) {
+                chapterId = job.getKnowledgeId();
+            }
+            
+            if (chapterId != null && !chapterId.isEmpty()) {
+                learningRecordService.getChapterRecords(job.getCourseId(), chapterId)
+                        .stream()
+                        .filter(record -> record.getJobId().equals(job.getJobId()))
+                        .findFirst()
+                        .ifPresent(record -> {
+                            // 将学习记录的状态附加到 JobDTO
+                            job.setCompleted("completed".equals(record.getStatus()));
+                            job.setProgress(record.getProgress());
+                            job.setPlayedTime(record.getPlayedTime());
+                            log.debug("任务 {} 的学习状态: {}, 进度: {}%", 
+                                    job.getJobId(), record.getStatus(), record.getProgress());
+                        });
+            }
+        } catch (Exception e) {
+            log.debug("获取任务 {} 的学习记录失败: {}", job.getJobId(), e.getMessage());
+        }
+    }
+
+    /**
      * 从 otherInfo 中提取 CPI
      *
      * @param otherInfo otherInfo 字符串
@@ -1037,17 +1074,36 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                 log.error("用户未绑定超星账号: {}", username);
                 throw new RuntimeException("请先绑定超星账号");
             }
-            
-            // 4. 使用Cookie重新登录以恢复fid/uid
-            log.info("使用保存的Cookie重新登录以恢复会话: userId={}", user.getId());
-            LoginService.LoginResult loginResult = loginService.loginWithCookie(user.getChaoxingCookie());
+                        
+            // 4. 【关键修复】解密 Cookie
+            String decryptedCookie;
+            try {
+                log.info("开始解密 Cookie，加密长度: {}", user.getChaoxingCookie().length());
+                log.debug("加密 Cookie 前100字符: {}", 
+                        user.getChaoxingCookie().length() > 100 ? 
+                        user.getChaoxingCookie().substring(0, 100) + "..." : user.getChaoxingCookie());
+                
+                decryptedCookie = cipherManager.decrypt(user.getChaoxingCookie());
+                
+                log.info("Cookie 解密成功，解密后长度: {}", decryptedCookie.length());
+                log.debug("解密 Cookie 前100字符: {}", 
+                        decryptedCookie.length() > 100 ? 
+                        decryptedCookie.substring(0, 100) + "..." : decryptedCookie);
+            } catch (Exception e) {
+                log.error("Cookie 解密失败，加密内容: {}", user.getChaoxingCookie(), e);
+                throw new RuntimeException("Cookie 解密失败，请重新绑定超星账号");
+            }
+                        
+            // 5. 使用解密后的 Cookie 重新登录以恢复 fid/uid
+            log.info("使用保存的 Cookie 重新登录以恢复会话: userId={}", user.getId());
+            LoginService.LoginResult loginResult = loginService.loginWithCookie(decryptedCookie);
             
             if (!loginResult.isSuccess()) {
-                log.error("Cookie登录失败: {}", loginResult.getMessage());
-                throw new RuntimeException("Cookie已失效，请重新绑定超星账号");
+                log.error("Cookie 登录失败: {}", loginResult.getMessage());
+                throw new RuntimeException("Cookie 已失效，请重新绑定超星账号");
             }
-            
-            // 5. 验证fid/uid是否成功设置
+                        
+            // 6. 验证 fid/uid 是否成功设置
             String newFid = sessionManager.getFid();
             String newUid = sessionManager.getUid();
             
@@ -1119,6 +1175,9 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             public List<Map<String, Object>> getChapters() {
                 // 获取所有章节列表
                 try {
+                    // 确保当前线程已加载 Cookie
+                    ensureSessionValid();
+                    
                     Map<String, Object> chapterDetail = chaoxingChapterService.getChapterDetail(courseId, clazzId, cpi);
                     
                     @SuppressWarnings("unchecked")
@@ -1152,6 +1211,9 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
             public void studyChapter(int chapterIndex) {
                 // 学习单个章节
                 try {
+                    // 【关键修复】在每个工作线程开始时加载 Cookie
+                    ensureSessionValid();
+                    
                     // 获取章节详情以获取 knowledgeId
                     Map<String, Object> chapterDetail = chaoxingChapterService.getChapterDetail(courseId, clazzId, cpi);
                     
