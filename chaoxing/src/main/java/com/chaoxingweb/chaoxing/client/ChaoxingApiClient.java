@@ -770,4 +770,80 @@ public class ChaoxingApiClient {
             return false;
         }
     }
+
+    /**
+     * 学习空页面（访问章节学习页面以标记完成）
+     *
+     * @param courseId 课程ID
+     * @param clazzId 班级ID
+     * @param chapterId 章节ID
+     * @param cpi CPI
+     * @return 是否成功
+     */
+    public boolean completeEmptyPage(String courseId, String clazzId, String chapterId, String cpi) {
+        try {
+            log.debug("开始学习空页面: courseId={}, chapterId={}", courseId, chapterId);
+
+            // 获取会话
+            String cookies = sessionManager.getCookie();
+            if (cookies == null || cookies.isEmpty()) {
+                log.error("未登录，无法学习空页面");
+                return false;
+            }
+
+            // 构造URL参数（与 Python 实现保持一致）
+            String url = "https://mooc1.chaoxing.com/mooc-ans/mycourse/studentstudyAjax";
+            
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("courseId", courseId);
+            params.add("clazzid", clazzId);
+            params.add("chapterId", chapterId);
+            params.add("cpi", cpi);
+            params.add("verificationcode", "");
+            params.add("mooc2", "1");
+            params.add("microTopicId", "0");
+            params.add("editorPreview", "0");
+
+            // 构造请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", USER_AGENT);
+            headers.set("Cookie", cookies);
+
+            // 发送GET请求
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+            
+            // 构建完整URL
+            StringBuilder urlBuilder = new StringBuilder(url);
+            urlBuilder.append("?");
+            boolean first = true;
+            for (Map.Entry<String, List<String>> entry : params.entrySet()) {
+                for (String value : entry.getValue()) {
+                    if (!first) {
+                        urlBuilder.append("&");
+                    }
+                    urlBuilder.append(entry.getKey()).append("=").append(value);
+                    first = false;
+                }
+            }
+            
+            ResponseEntity<String> response = restTemplate.exchange(
+                    urlBuilder.toString(), 
+                    HttpMethod.GET, 
+                    request, 
+                    String.class
+            );
+
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.warn("空页面学习失败，状态码：{}", response.getStatusCode());
+                return false;
+            }
+
+            log.debug("空页面学习成功");
+            return true;
+
+        } catch (Exception e) {
+            log.error("空页面学习异常", e);
+            return false;
+        }
+    }
 }

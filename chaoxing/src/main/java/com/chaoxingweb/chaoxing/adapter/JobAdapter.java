@@ -137,20 +137,30 @@ public class JobAdapter {
 
             // 处理无 job 字段的特殊任务（如阅读任务）
             if (!card.has("job") || card.get("job").isNull()) {
-                JobDTO readJob = processReadTask(card);
+                // 清理 otherInfo
+                String cleanedOtherInfo = null;
+                if (card.has("otherInfo")) {
+                    String otherInfo = card.get("otherInfo").asText();
+                    if (otherInfo != null && !otherInfo.isEmpty()) {
+                        cleanedOtherInfo = otherInfo.split("&")[0];
+                    }
+                }
+                
+                JobDTO readJob = processReadTask(card, cleanedOtherInfo);
                 if (readJob != null) {
                     jobList.add(readJob);
                 }
                 continue;
             }
 
-            // 清理 otherInfo 字段中的无效参数
+            // 清理 otherInfo 字段中的无效参数（与 Python 保持一致）
+            String cleanedOtherInfo = null;
             if (card.has("otherInfo")) {
                 String otherInfo = card.get("otherInfo").asText();
                 if (otherInfo != null && !otherInfo.isEmpty()) {
                     // 只保留第一个参数
-                    String cleanedInfo = otherInfo.split("&")[0];
-                    log.trace("清理 otherInfo: {} -> {}", otherInfo, cleanedInfo);
+                    cleanedOtherInfo = otherInfo.split("&")[0];
+                    log.trace("清理 otherInfo: {} -> {}", otherInfo, cleanedOtherInfo);
                 }
             }
 
@@ -168,16 +178,16 @@ public class JobAdapter {
                     || (property != null && property.has("streamName"))
                     || (property != null && property.has("vdoid"));
 
-            // 根据任务类型处理
+            // 根据任务类型处理，传入清理后的 otherInfo
             JobDTO job = null;
             if (isLive) {
-                job = processLiveTask(card);
+                job = processLiveTask(card, cleanedOtherInfo);
             } else if ("video".equals(cardType)) {
-                job = processVideoTask(card);
+                job = processVideoTask(card, cleanedOtherInfo);
             } else if ("document".equals(cardType)) {
-                job = processDocumentTask(card);
+                job = processDocumentTask(card, cleanedOtherInfo);
             } else if ("workid".equals(cardType)) {
-                job = processWorkTask(card);
+                job = processWorkTask(card, cleanedOtherInfo);
             } else {
                 log.warn("未知的任务类型: {}", cardType);
                 log.debug("任务卡片数据: {}", card.toString());
@@ -195,9 +205,10 @@ public class JobAdapter {
      * 处理直播类型任务
      *
      * @param card 任务卡片数据
+     * @param cleanedOtherInfo 清理后的 otherInfo（可选）
      * @return JobDTO
      */
-    private JobDTO processLiveTask(JsonNode card) {
+    private JobDTO processLiveTask(JsonNode card, String cleanedOtherInfo) {
         try {
             JsonNode property = card.get("property");
             if (property == null) {
@@ -211,9 +222,9 @@ public class JobAdapter {
             job.setJobType(JobType.LIVE); // 修正：使用LIVE类型
             job.setType("live");
             
-            // 设置额外参数
+            // 设置额外参数（使用清理后的 otherInfo）
             job.setJtoken(getStringValue(card, "jtoken", ""));
-            job.setOtherinfo(getStringValue(card, "otherInfo", ""));
+            job.setOtherinfo(cleanedOtherInfo != null ? cleanedOtherInfo : getStringValue(card, "otherInfo", ""));
             
             // 设置直播特有字段
             job.setLiveId(getStringValue(property, "liveId", ""));
@@ -238,9 +249,10 @@ public class JobAdapter {
      * 处理阅读类型任务
      *
      * @param card 任务卡片数据
+     * @param cleanedOtherInfo 清理后的 otherInfo（可选）
      * @return JobDTO
      */
-    private JobDTO processReadTask(JsonNode card) {
+    private JobDTO processReadTask(JsonNode card, String cleanedOtherInfo) {
         // 判断是否为阅读任务
         String type = getStringValue(card, "type", "");
         JsonNode property = card.get("property");
@@ -272,9 +284,10 @@ public class JobAdapter {
      * 处理视频类型任务
      *
      * @param card 任务卡片数据
+     * @param cleanedOtherInfo 清理后的 otherInfo（可选）
      * @return JobDTO
      */
-    private JobDTO processVideoTask(JsonNode card) {
+    private JobDTO processVideoTask(JsonNode card, String cleanedOtherInfo) {
         try {
             // 添加原始JSON日志，用于诊断objectId字段问题
             log.info("视频任务卡片完整JSON: {}", card.toPrettyString());
@@ -320,7 +333,8 @@ public class JobAdapter {
             }
             job.setObjectId(objectId);
             
-            job.setOtherinfo(getStringValue(card, "otherInfo", ""));
+            // 使用清理后的 otherInfo
+            job.setOtherinfo(cleanedOtherInfo != null ? cleanedOtherInfo : getStringValue(card, "otherInfo", ""));
             job.setDtoken(getStringValue(card, "dtoken", ""));
             
             int playTime = getIntValue(card, "playTime", 0);
@@ -335,11 +349,11 @@ public class JobAdapter {
             String videoFaceCaptureEnc = getStringValue(card, "videoFaceCaptureEnc", "");
             job.setVideoFaceCaptureEnc(videoFaceCaptureEnc);
             
-            // 从 otherInfo 中提取 duration
-            String otherInfo = getStringValue(card, "otherInfo", "");
-            if (otherInfo != null && !otherInfo.isEmpty()) {
+            // 从 otherInfo 中提取 duration（使用清理后的）
+            String otherInfoToParse = cleanedOtherInfo != null ? cleanedOtherInfo : getStringValue(card, "otherInfo", "");
+            if (otherInfoToParse != null && !otherInfoToParse.isEmpty()) {
                 // 尝试解析 duration 参数
-                String[] params = otherInfo.split("&");
+                String[] params = otherInfoToParse.split("&");
                 for (String param : params) {
                     if (param.startsWith("duration=")) {
                         try {
@@ -366,9 +380,10 @@ public class JobAdapter {
      * 处理文档类型任务
      *
      * @param card 任务卡片数据
+     * @param cleanedOtherInfo 清理后的 otherInfo（可选）
      * @return JobDTO
      */
-    private JobDTO processDocumentTask(JsonNode card) {
+    private JobDTO processDocumentTask(JsonNode card, String cleanedOtherInfo) {
         try {
             JsonNode property = card.get("property");
             
@@ -378,6 +393,7 @@ public class JobAdapter {
             job.setJobType(JobType.DOCUMENT);
             job.setType("document");
             job.setJtoken(getStringValue(card, "jtoken", ""));
+            job.setOtherinfo(cleanedOtherInfo != null ? cleanedOtherInfo : getStringValue(card, "otherInfo", ""));
             
             // 文档特有参数
             job.setObjectId(getStringValue(card, "objectid", ""));
@@ -397,9 +413,10 @@ public class JobAdapter {
      * 处理作业类型任务
      *
      * @param card 任务卡片数据
+     * @param cleanedOtherInfo 清理后的 otherInfo（可选）
      * @return JobDTO
      */
-    private JobDTO processWorkTask(JsonNode card) {
+    private JobDTO processWorkTask(JsonNode card, String cleanedOtherInfo) {
         try {
             JobDTO job = new JobDTO();
             job.setJobId(getStringValue(card, "jobid", ""));

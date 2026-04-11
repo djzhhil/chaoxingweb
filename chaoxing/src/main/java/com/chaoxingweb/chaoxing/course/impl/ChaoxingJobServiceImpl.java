@@ -121,10 +121,22 @@ public class ChaoxingJobServiceImpl implements ChaoxingJobService {
                 }
             }
 
-            // 如果没有任务，标记为空页面
+            // 如果没有任务，自动学习空页面（与 Python 保持一致）
             if (allJobs.isEmpty()) {
-                log.info("该章节没有任务点");
+                log.info("该章节没有任务点，自动学习空页面");
                 jobInfo.put("empty", true);
+                
+                // 调用空页面学习
+                try {
+                    boolean success = apiClient.completeEmptyPage(courseId, clazzId, knowledgeId, cpi);
+                    if (success) {
+                        log.info("✅ 空页面学习完成: courseId={}, chapterId={}", courseId, knowledgeId);
+                    } else {
+                        log.warn("❌ 空页面学习失败: courseId={}, chapterId={}", courseId, knowledgeId);
+                    }
+                } catch (Exception e) {
+                    log.error("空页面学习异常", e);
+                }
             }
 
             log.info("任务列表获取成功，共{}个任务", allJobs.size());
